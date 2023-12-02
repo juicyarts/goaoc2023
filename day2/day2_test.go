@@ -136,10 +136,10 @@ func TestPowerOfMinimumSetOfCubes(t *testing.T) {
 
 	for index, input := range testInput {
 		game := InputToGame(input)
-		actualPowerGameOne := game.PowerOfMinimumSetOfCubes()
+		actualPower := game.PowerOfMinimumSetOfCubes()
 
-		if actualPowerGameOne != expectedPowers[index] {
-			t.Errorf("Expected power of minimum set of cubes to be %d, got %d", expectedPowers[index], actualPowerGameOne)
+		if actualPower != expectedPowers[index] {
+			t.Errorf("Expected power of minimum set of cubes to be %d, got %d", expectedPowers[index], actualPower)
 		}
 	}
 }
