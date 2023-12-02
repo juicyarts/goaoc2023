@@ -1,7 +1,7 @@
 go 1.21.4
 
-use ./utils
-
-use ./day1
-
-use ./day2
+use (
+	./day1
+	./day2
+	./utils
+)

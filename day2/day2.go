@@ -1,6 +1,7 @@
 package day2
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 )
@@ -17,6 +18,10 @@ type Game struct {
 	minmumCubesNeeded CubeSet
 }
 
+func getCubeAmountByColorSubstring(s string, color string) (int, error) {
+	return strconv.Atoi(strings.Replace(s, fmt.Sprintf(" %s", color), "", -1))
+}
+
 func InputToGame(input string) (game Game) {
 	var id int
 	id, _ = strconv.Atoi(strings.Replace(strings.Split(input, ":")[0], "Game ", "", -1))
@@ -27,33 +32,32 @@ func InputToGame(input string) (game Game) {
 
 	inputWithoutId := strings.Replace(input, "Game "+strconv.Itoa(id)+": ", "", -1)
 	sets := strings.Split(inputWithoutId, "; ")
+
 	for _, set := range sets {
-		var blue, red, green int
-		for _, color := range strings.Split(set, ", ") {
-			if strings.Contains(color, "blue") {
-				blue, _ = strconv.Atoi(strings.Replace(color, " blue", "", -1))
-				if blue > game.minmumCubesNeeded.blue {
-					game.minmumCubesNeeded.blue = blue
-				}
+		var newSet CubeSet
+		for _, colorSubstring := range strings.Split(set, ", ") {
+			if strings.Contains(colorSubstring, "blue") {
+				newSet.blue, _ = getCubeAmountByColorSubstring(colorSubstring, "blue")
 			}
-			if strings.Contains(color, "red") {
-				red, _ = strconv.Atoi(strings.Replace(color, " red", "", -1))
-				if red > game.minmumCubesNeeded.red {
-					game.minmumCubesNeeded.red = red
-				}
+			if strings.Contains(colorSubstring, "red") {
+				newSet.red, _ = getCubeAmountByColorSubstring(colorSubstring, "red")
 			}
-			if strings.Contains(color, "green") {
-				green, _ = strconv.Atoi(strings.Replace(color, " green", "", -1))
-				if green > game.minmumCubesNeeded.green {
-					game.minmumCubesNeeded.green = green
-				}
+			if strings.Contains(colorSubstring, "green") {
+				newSet.green, _ = getCubeAmountByColorSubstring(colorSubstring, "green")
 			}
 		}
-		game.sets = append(game.sets, CubeSet{
-			blue:  blue,
-			red:   red,
-			green: green,
-		})
+
+		if newSet.blue > game.minmumCubesNeeded.blue {
+			game.minmumCubesNeeded.blue = newSet.blue
+		}
+		if newSet.red > game.minmumCubesNeeded.red {
+			game.minmumCubesNeeded.red = newSet.red
+		}
+		if newSet.green > game.minmumCubesNeeded.green {
+			game.minmumCubesNeeded.green = newSet.green
+		}
+
+		game.sets = append(game.sets, newSet)
 	}
 
 	return game
@@ -72,7 +76,7 @@ func (game Game) PowerOfMinimumSetOfCubes() int {
 	return game.minmumCubesNeeded.blue * game.minmumCubesNeeded.red * game.minmumCubesNeeded.green
 }
 
-func GetSumOfPossibleGameIds(input []string, availableCubes CubeSet) (sum int) {
+func SumOfPossibleGameIds(input []string, availableCubes CubeSet) (sum int) {
 	for _, gameInput := range input {
 		game := InputToGame(gameInput)
 		if game.IsPossible(availableCubes) {
@@ -83,7 +87,9 @@ func GetSumOfPossibleGameIds(input []string, availableCubes CubeSet) (sum int) {
 	return sum
 }
 
-func GetSumOfPowerOfMinimumCubeSetsOfGames(input []string) (sum int) {
+// Part 2
+
+func SumOfPowerOfMinimumCubeSetsOfGames(input []string) (sum int) {
 	for _, gameInput := range input {
 		game := InputToGame(gameInput)
 		sum += game.PowerOfMinimumSetOfCubes()
