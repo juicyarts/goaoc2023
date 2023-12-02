@@ -105,7 +105,7 @@ func TestIsGamePossible(t *testing.T) {
 			}
 		} else {
 			if game.IsPossible(availableCubes) {
-				t.Errorf("Expected game %d to be impossible, got impossible", game.id)
+				t.Errorf("Expected game %d to be impossible, got possible", game.id)
 			}
 		}
 	}
