@@ -32,7 +32,6 @@ func SumCalbirationValues(values []string) int {
 }
 
 // Part 2
-
 var legalWords = map[string]int{
 	"one":   1,
 	"two":   2,
