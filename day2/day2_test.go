@@ -107,7 +107,7 @@ func TestIsGamePossible(t *testing.T) {
 	}
 }
 
-func TestGetSumOfPossibleGameIds(t *testing.T) {
+func TestSumOfPossibleGameIds(t *testing.T) {
 	var availableCubes = CubeSet{blue: 14, red: 12, green: 13}
 
 	var sumOfPossibleGameIds = SumOfPossibleGameIds(testInput, availableCubes)
@@ -118,7 +118,7 @@ func TestGetSumOfPossibleGameIds(t *testing.T) {
 	}
 }
 
-func TestGetSumOfPossibleGameIdsWithInput(t *testing.T) {
+func TestSumOfPossibleGameIdsWithInput(t *testing.T) {
 	Input, _ := utils.ReadInputFile("input.txt")
 	var availableCubes = CubeSet{blue: 14, red: 12, green: 13}
 
@@ -144,7 +144,7 @@ func TestPowerOfMinimumSetOfCubes(t *testing.T) {
 	}
 }
 
-func TestGetSumOfPowerOfMinimumCubeSetsOfGames(t *testing.T) {
+func TestSumOfPowerOfMinimumCubeSetsOfGames(t *testing.T) {
 	var sumOfPowerOfGames = SumOfPowerOfMinimumCubeSetsOfGames(testInput)
 	var expectedSum = 2286
 
@@ -153,7 +153,7 @@ func TestGetSumOfPowerOfMinimumCubeSetsOfGames(t *testing.T) {
 	}
 }
 
-func TestGetSumOfPowerOfMinimumCubeSetsOfGamesWithInput(t *testing.T) {
+func TestSumOfPowerOfMinimumCubeSetsOfGamesWithInput(t *testing.T) {
 	Input, _ := utils.ReadInputFile("input.txt")
 	var sumOfPowerOfGames = SumOfPowerOfMinimumCubeSetsOfGames(Input)
 	var expectedSum = 69110

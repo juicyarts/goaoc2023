@@ -88,7 +88,6 @@ func SumOfPossibleGameIds(input []string, availableCubes CubeSet) (sum int) {
 }
 
 // Part 2
-
 func SumOfPowerOfMinimumCubeSetsOfGames(input []string) (sum int) {
 	for _, gameInput := range input {
 		game := InputToGame(gameInput)

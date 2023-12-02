@@ -6,8 +6,7 @@ import (
 	"testing"
 )
 
-// Day 1 part 1
-
+// Part 1
 func TestSumCalibrationValue(t *testing.T) {
 	got := FindFirstAndLastDigit("3abc2")
 	want := 32
@@ -55,8 +54,7 @@ func TestSumCalibrationValuesFromInput(t *testing.T) {
 	}
 }
 
-// Day 1 part 2
-
+// Part 2
 func TestFindAllIndexes(t *testing.T) {
 	got := FindAllIndexesOfSubstringInString("two1two", "two")
 	want := []int{0, 4}
