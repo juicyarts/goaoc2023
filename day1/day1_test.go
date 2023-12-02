@@ -1,31 +1,10 @@
 package day1
 
 import (
-	"bufio"
-	"os"
+	"aoc2023/utils"
 	"reflect"
 	"testing"
 )
-
-func ReadInputFile(filepath string) ([]string, error) {
-	file, err := os.Open(filepath)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	var lines []string
-	for scanner.Scan() {
-		lines = append(lines, scanner.Text())
-	}
-
-	if err := scanner.Err(); err != nil {
-		return nil, err
-	}
-
-	return lines, nil
-}
 
 // Day 1 part 1
 
@@ -67,7 +46,7 @@ func TestSumCalibrationValues2(t *testing.T) {
 }
 
 func TestSumCalibrationValuesFromInput(t *testing.T) {
-	Input, _ := ReadInputFile("input.txt")
+	Input, _ := utils.ReadInputFile("input.txt")
 	got := SumCalbirationValues(Input)
 	want := 54597
 
@@ -115,7 +94,7 @@ func TestSumCalibrationValuesWithWords1(t *testing.T) {
 }
 
 func TestSumCalibrationValuesFromInputWithWords(t *testing.T) {
-	Input, _ := ReadInputFile("input.txt")
+	Input, _ := utils.ReadInputFile("input.txt")
 	got := SumCalbirationValuesWithWords(Input)
 	want := 54504
 

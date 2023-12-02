@@ -1,31 +1,10 @@
 package day2
 
 import (
-	"bufio"
-	"os"
+	"aoc2023/utils"
 	"reflect"
 	"testing"
 )
-
-func ReadInputFile(filepath string) ([]string, error) {
-	file, err := os.Open(filepath)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	var lines []string
-	for scanner.Scan() {
-		lines = append(lines, scanner.Text())
-	}
-
-	if err := scanner.Err(); err != nil {
-		return nil, err
-	}
-
-	return lines, nil
-}
 
 var testInput = []string{
 	"Game 1: 3 blue, 4 red; 1 red, 2 green, 6 blue; 2 green",
@@ -120,7 +99,7 @@ func TestSumOfPossibleGameIds(t *testing.T) {
 }
 
 func TestSumOfPossibleGameIdsWithInput(t *testing.T) {
-	Input, _ := ReadInputFile("input.txt")
+	Input, _ := utils.ReadInputFile("input.txt")
 	var availableCubes = CubeSet{blue: 14, red: 12, green: 13}
 
 	var sumOfPossibleGameIds = GetSumOfPossibleGameIds(Input, availableCubes)
