@@ -1,7 +1,6 @@
 package day1
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 )
@@ -96,7 +95,6 @@ func SumCalbirationValuesWithWords(values []string) int {
 	var sum int
 	for _, value := range values {
 		res := FindFirstAndLastDigitOrWord(value)
-		fmt.Println(res)
 		sum += res
 	}
 	return sum
