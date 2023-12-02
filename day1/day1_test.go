@@ -2,8 +2,12 @@ package day1
 
 import (
 	"aoc2023/utils"
+	"os"
 	"reflect"
+	"strconv"
 	"testing"
+
+	"github.com/joho/godotenv"
 )
 
 // Part 1
@@ -45,9 +49,11 @@ func TestSumCalibrationValues2(t *testing.T) {
 }
 
 func TestSumCalibrationValuesFromInput(t *testing.T) {
+	godotenv.Load()
+
 	Input, _ := utils.ReadInputFile("input.txt")
 	got := SumCalbirationValues(Input)
-	want := 54597
+	want, _ := strconv.Atoi(os.Getenv("result_1"))
 
 	if got != want {
 		t.Errorf("got %v want %v", got, want)
@@ -92,9 +98,11 @@ func TestSumCalibrationValuesWithWords1(t *testing.T) {
 }
 
 func TestSumCalibrationValuesFromInputWithWords(t *testing.T) {
+	godotenv.Load()
+
 	Input, _ := utils.ReadInputFile("input.txt")
 	got := SumCalbirationValuesWithWords(Input)
-	want := 54504
+	want, _ := strconv.Atoi(os.Getenv("result_2"))
 
 	if got != want {
 		t.Errorf("got %v want %v", got, want)

@@ -2,9 +2,13 @@ package day2
 
 import (
 	"aoc2023/utils"
+	"os"
 	"reflect"
 	"slices"
+	"strconv"
 	"testing"
+
+	"github.com/joho/godotenv"
 )
 
 var testInput = []string{
@@ -119,11 +123,13 @@ func TestSumOfPossibleGameIds(t *testing.T) {
 }
 
 func TestSumOfPossibleGameIdsWithInput(t *testing.T) {
+	godotenv.Load()
+
 	Input, _ := utils.ReadInputFile("input.txt")
 	var availableCubes = CubeSet{blue: 14, red: 12, green: 13}
 
 	var sumOfPossibleGameIds = SumOfPossibleGameIds(Input, availableCubes)
-	var expectedSum = 2810
+	expectedSum, _ := strconv.Atoi(os.Getenv("result_1"))
 
 	if sumOfPossibleGameIds != expectedSum {
 		t.Errorf("Expected sum of possible game ids to be %d, got %d", expectedSum, sumOfPossibleGameIds)
@@ -154,9 +160,11 @@ func TestSumOfPowerOfMinimumCubeSetsOfGames(t *testing.T) {
 }
 
 func TestSumOfPowerOfMinimumCubeSetsOfGamesWithInput(t *testing.T) {
+	godotenv.Load()
+
 	Input, _ := utils.ReadInputFile("input.txt")
 	var sumOfPowerOfGames = SumOfPowerOfMinimumCubeSetsOfGames(Input)
-	var expectedSum = 69110
+	expectedSum, _ := strconv.Atoi(os.Getenv("result_2"))
 
 	if sumOfPowerOfGames != expectedSum {
 		t.Errorf("Expected sum of power of games to be %d, got %d", expectedSum, sumOfPowerOfGames)
