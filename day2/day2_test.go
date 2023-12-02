@@ -3,6 +3,7 @@ package day2
 import (
 	"aoc2023/utils"
 	"reflect"
+	"slices"
 	"testing"
 )
 
@@ -15,79 +16,98 @@ var testInput = []string{
 }
 
 func TestInputToGame(t *testing.T) {
-	gameOne := InputToGame(testInput[0])
-	wantOne := Game{
-		id: 1,
-		sets: []CubeSet{
-			{blue: 3, red: 4},
-			{red: 1, green: 2, blue: 6},
-			{green: 2},
+	var expectedResults = []Game{
+		{
+			id: 1,
+			sets: []CubeSet{
+				{blue: 3, red: 4},
+				{red: 1, green: 2, blue: 6},
+				{green: 2},
+			},
+			minmumCubesNeeded: CubeSet{
+				red:   4,
+				green: 2,
+				blue:  6,
+			},
+		},
+		{
+			id: 2,
+			sets: []CubeSet{
+				{blue: 1, green: 2},
+				{green: 3, blue: 4, red: 1},
+				{green: 1, blue: 1},
+			},
+			minmumCubesNeeded: CubeSet{
+				red:   1,
+				green: 3,
+				blue:  4,
+			},
+		},
+		{
+			id: 3,
+			sets: []CubeSet{
+				{green: 8, blue: 6, red: 20},
+				{blue: 5, red: 4, green: 13},
+				{green: 5, red: 1},
+			},
+			minmumCubesNeeded: CubeSet{
+				red:   20,
+				green: 13,
+				blue:  6,
+			},
+		},
+		{
+			id: 4,
+			sets: []CubeSet{
+				{green: 1, red: 3, blue: 6},
+				{green: 3, red: 6},
+				{green: 3, blue: 15, red: 14},
+			},
+			minmumCubesNeeded: CubeSet{
+				red:   14,
+				green: 3,
+				blue:  15,
+			},
+		},
+		{
+			id: 5,
+			sets: []CubeSet{
+				{red: 6, blue: 1, green: 3},
+				{blue: 2, red: 1, green: 2},
+			},
+			minmumCubesNeeded: CubeSet{
+				red:   6,
+				green: 3,
+				blue:  2,
+			},
 		},
 	}
 
-	if !reflect.DeepEqual(gameOne, wantOne) {
-		t.Errorf("Expected game to be %v, got %v", wantOne, gameOne)
-	}
-
-	gameTwo := InputToGame(testInput[1])
-	wantTwo := Game{
-		id: 2,
-		sets: []CubeSet{
-			{blue: 1, green: 2},
-			{green: 3, blue: 4, red: 1},
-			{green: 1, blue: 1},
-		},
-	}
-	if !reflect.DeepEqual(gameTwo, wantTwo) {
-		t.Errorf("Expected game to be %v, got %v", wantTwo, gameTwo)
-	}
-
-	gameThree := InputToGame(testInput[2])
-	wantThree := Game{
-		id: 3,
-		sets: []CubeSet{
-			{green: 8, blue: 6, red: 20},
-			{blue: 5, red: 4, green: 13},
-			{green: 5, red: 1},
-		},
-	}
-
-	if !reflect.DeepEqual(gameThree, wantThree) {
-		t.Errorf("Expected game to be %v, got %v", wantThree, gameThree)
+	for index, input := range testInput {
+		game := InputToGame(input)
+		if !reflect.DeepEqual(game, expectedResults[index]) {
+			t.Errorf("Expected game to be %v, got %v", expectedResults[index], game)
+		}
 	}
 }
 
 func TestIsGamePossible(t *testing.T) {
-	gameOne := InputToGame(testInput[0])
-	gameTwo := InputToGame(testInput[1])
-	gameThree := InputToGame(testInput[2])
-	gameFour := InputToGame(testInput[3])
-	gameFive := InputToGame(testInput[4])
-
 	var availableCubes = CubeSet{blue: 14, red: 12, green: 13}
-
-	if !gameOne.IsPossible(availableCubes) {
-		t.Errorf("Expected game One to be possible, got impossible")
-	}
-
-	if !gameTwo.IsPossible(availableCubes) {
-		t.Errorf("Expected game Two to be possible, got impossible")
-	}
-
-	if !gameFive.IsPossible(availableCubes) {
-		t.Errorf("Expected game Five to be possible, got impossible")
-	}
-
-	if gameThree.IsPossible(availableCubes) {
-		t.Errorf("Expected game Three to be impossible, got possible")
-	}
-
-	if gameFour.IsPossible(availableCubes) {
-		t.Errorf("Expected game Four to be impossible, got possible")
+	for _, input := range testInput {
+		game := InputToGame(input)
+		if slices.Contains([]int{1, 2, 5}, game.id) {
+			if !game.IsPossible(availableCubes) {
+				t.Errorf("Expected game %d to be possible, got impossible", game.id)
+			}
+		} else {
+			if game.IsPossible(availableCubes) {
+				t.Errorf("Expected game %d to be impossible, got impossible", game.id)
+			}
+		}
 	}
 }
 
-func TestSumOfPossibleGameIds(t *testing.T) {
+func TestGetSumOfPossibleGameIds(t *testing.T) {
 	var availableCubes = CubeSet{blue: 14, red: 12, green: 13}
 
 	var sumOfPossibleGameIds = GetSumOfPossibleGameIds(testInput, availableCubes)
@@ -98,7 +118,7 @@ func TestSumOfPossibleGameIds(t *testing.T) {
 	}
 }
 
-func TestSumOfPossibleGameIdsWithInput(t *testing.T) {
+func TestGetSumOfPossibleGameIdsWithInput(t *testing.T) {
 	Input, _ := utils.ReadInputFile("input.txt")
 	var availableCubes = CubeSet{blue: 14, red: 12, green: 13}
 
@@ -107,5 +127,38 @@ func TestSumOfPossibleGameIdsWithInput(t *testing.T) {
 
 	if sumOfPossibleGameIds != expectedSum {
 		t.Errorf("Expected sum of possible game ids to be %d, got %d", expectedSum, sumOfPossibleGameIds)
+	}
+}
+
+// Part 2
+func TestPowerOfMinimumSetOfCubes(t *testing.T) {
+	var expectedPowers = []int{48, 12, 1560, 630, 36}
+
+	for index, input := range testInput {
+		game := InputToGame(input)
+		actualPowerGameOne := game.PowerOfMinimumSetOfCubes()
+
+		if actualPowerGameOne != expectedPowers[index] {
+			t.Errorf("Expected power of minimum set of cubes to be %d, got %d", expectedPowers[index], actualPowerGameOne)
+		}
+	}
+}
+
+func TestGetSumOfPowerOfMinimumCubeSetsOfGames(t *testing.T) {
+	var sumOfPowerOfGames = GetSumOfPowerOfMinimumCubeSetsOfGames(testInput)
+	var expectedSum = 2286
+
+	if sumOfPowerOfGames != expectedSum {
+		t.Errorf("Expected sum of power of games to be %d, got %d", expectedSum, sumOfPowerOfGames)
+	}
+}
+
+func TestGetSumOfPowerOfMinimumCubeSetsOfGamesWithInput(t *testing.T) {
+	Input, _ := utils.ReadInputFile("input.txt")
+	var sumOfPowerOfGames = GetSumOfPowerOfMinimumCubeSetsOfGames(Input)
+	var expectedSum = 69110
+
+	if sumOfPowerOfGames != expectedSum {
+		t.Errorf("Expected sum of power of games to be %d, got %d", expectedSum, sumOfPowerOfGames)
 	}
 }
