@@ -103,31 +103,6 @@ func InputToHands(input []string) []Hand {
 					break
 				}
 			}
-
-			// copilot art
-			// if hands[i].sorter[0] > hands[j].sorter[0] {
-			// 	hands[i], hands[j] = hands[j], hands[i]
-			// } else if hands[i].sorter[0] == hands[j].sorter[0] {
-			// 	if hands[i].sorter[1] > hands[j].sorter[1] {
-			// 		hands[i], hands[j] = hands[j], hands[i]
-			// 	} else if hands[i].sorter[1] == hands[j].sorter[1] {
-			// 		if hands[i].sorter[2] > hands[j].sorter[2] {
-			// 			hands[i], hands[j] = hands[j], hands[i]
-			// 		} else if hands[i].sorter[2] == hands[j].sorter[2] {
-			// 			if hands[i].sorter[3] > hands[j].sorter[3] {
-			// 				hands[i], hands[j] = hands[j], hands[i]
-			// 			} else if hands[i].sorter[3] == hands[j].sorter[3] {
-			// 				if hands[i].sorter[4] > hands[j].sorter[4] {
-			// 					hands[i], hands[j] = hands[j], hands[i]
-			// 				} else if hands[i].sorter[4] == hands[j].sorter[4] {
-			// 					if hands[i].sorter[5] > hands[j].sorter[5] {
-			// 						hands[i], hands[j] = hands[j], hands[i]
-			// 					}
-			// 				}
-			// 			}
-			// 		}
-			// 	}
-			// }
 		}
 	}
 
