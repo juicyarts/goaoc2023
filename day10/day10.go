@@ -3,6 +3,8 @@ package day10
 import (
 	"fmt"
 	"strings"
+
+	"github.com/fatih/color"
 )
 
 var instructionMap = map[string][]int{
@@ -27,11 +29,13 @@ type Step struct {
 	sourceDir   int
 }
 
-func getNextStep(maze [][]string, next Step, totalSteps int) (int, Step, [][]string) {
+func getNextStep(maze [][]string, next Step, totalSteps int, stepMap map[string]int) (int, Step, map[string]int) {
 	totalSteps += 1
 
+	stepMap[fmt.Sprintf("%d|%d", next.location[0], next.location[1])] = 1
+
 	if next.instruction == "S" {
-		return totalSteps, next, maze
+		return totalSteps, next, stepMap
 	} else {
 
 		var nextSourceDir int
@@ -41,8 +45,6 @@ func getNextStep(maze [][]string, next Step, totalSteps int) (int, Step, [][]str
 			next.location[0],
 			next.location[1],
 		}
-
-		maze[next.location[0]][next.location[1]] = "0"
 
 		for i, value := range inst {
 			if value != 0 && i != next.sourceDir {
@@ -70,9 +72,7 @@ func getNextStep(maze [][]string, next Step, totalSteps int) (int, Step, [][]str
 			sourceDir:   nextSourceDir,
 		}
 
-		// fmt.Printf("nextStep: %+v \n", nextStep)
-
-		return getNextStep(maze, nextStep, totalSteps)
+		return getNextStep(maze, nextStep, totalSteps, stepMap)
 	}
 }
 
@@ -82,7 +82,7 @@ func getTotalSteps(maze [][]string, start []int) int {
 	var topNeighbour, rightNeighbour, bottomNeighbour, leftNeighbour Step
 	if start[0] > 0 {
 		var key = maze[start[0]-1][start[1]]
-		if key != "." {
+		if key != "." && key != "-" && key != "L" && key != "J" {
 			topNeighbour = Step{
 				instruction: key,
 				location:    []int{start[0] - 1, start[1]},
@@ -93,7 +93,7 @@ func getTotalSteps(maze [][]string, start []int) int {
 	}
 	if start[0] < len(maze)-1 {
 		var key = maze[start[0]+1][start[1]]
-		if key != "." {
+		if key != "." && key != "-" && key != "F" && key != "J" && key != "7" {
 			bottomNeighbour = Step{
 				instruction: key,
 				location:    []int{start[0] + 1, start[1]},
@@ -105,7 +105,7 @@ func getTotalSteps(maze [][]string, start []int) int {
 
 	if start[1] > 0 {
 		var key = maze[start[0]][start[1]-1]
-		if key != "." {
+		if key != "." && key != "|" && key != "7" && key != "J" {
 			leftNeighbour = Step{
 				instruction: key,
 				location:    []int{start[0], start[1] - 1},
@@ -117,7 +117,7 @@ func getTotalSteps(maze [][]string, start []int) int {
 
 	if start[1] < len(maze[start[0]])-1 {
 		var key = maze[start[0]][start[1]+1]
-		if key != "." {
+		if key != "." && key != "|" && key != "F" && key != "L" {
 			rightNeighbour = Step{
 				instruction: key,
 				location:    []int{start[0], start[1] + 1},
@@ -128,21 +128,52 @@ func getTotalSteps(maze [][]string, start []int) int {
 		}
 	}
 
-	stepsNeeded, _, newMaze := getNextStep(maze, nextStep, 0)
+	stepsNeeded, _, stepMap := getNextStep(maze, nextStep, 0, make(map[string]int, 0))
 
-	var totalCount = 0
+	// Just for visualizing the maze
+	for key, value := range maze {
+		for index, char := range value {
+			foo := fmt.Sprintf("%d|%d", key, index)
+			yellow := color.New(color.FgYellow).SprintFunc()
+			red := color.New(color.FgRed).SprintFunc()
+			white := color.New(color.FgWhite).SprintFunc()
 
-	for _, row := range newMaze {
-		fmt.Printf("%s \n", row)
-		for _, col := range row {
-			if col == "0" {
-				totalCount += 1
+			if char == "S" {
+				fmt.Printf("%s", red(char))
+			} else if stepMap[foo] == 1 {
+				if char == "L" {
+					char = "└"
+				}
+				if char == "J" {
+					char = "┘"
+				}
+				if char == "7" {
+					char = "┐"
+				}
+				if char == "F" {
+					char = "┌"
+				}
+				if char == "-" {
+					char = "─"
+				}
+				if char == "|" {
+					char = "│"
+				}
+
+				fmt.Printf("%s", yellow(char))
+			} else {
+				fmt.Printf("%s", white(char))
+
 			}
+
 		}
+
+		fmt.Print("\n")
 	}
 
 	// divide by 2 because we're counting steps to the farthest location and back
-	fmt.Printf("%+v %+v \n", stepsNeeded/2, totalCount)
+	fmt.Printf("---- \n steps needed: %+v \n", stepsNeeded/2)
+	fmt.Printf("---- \n steps map: %+v \n", stepMap)
 	return stepsNeeded / 2
 }
 
@@ -156,10 +187,8 @@ func StepsToFarthestLocation(input []string) int {
 				start = []int{lineIndex, charIndex}
 			}
 		}
-		fmt.Printf("%+v \n", newLine)
+		// fmt.Printf("%+v \n", newLine)
 		maze = append(maze, newLine)
 	}
-
-	fmt.Print("found start at: ", start, "\n")
 	return getTotalSteps(maze, start)
 }
