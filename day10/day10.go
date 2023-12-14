@@ -2,6 +2,7 @@ package day10
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/fatih/color"
@@ -29,24 +30,31 @@ type Step struct {
 	sourceDir   int
 }
 
-func getNextStep(maze [][]string, next Step, totalSteps int, stepMap map[string]int) (int, Step, map[string]int) {
+func getNextStep(maze [][]string, next Step, totalSteps int, stepMap map[string]int, rowMap map[int][]int) (int, Step, map[string]int, map[int][]int) {
 	totalSteps += 1
+
+	if next.instruction == "|" || next.instruction == "F" || next.instruction == "7" {
+		if rowMap[next.location[0]] == nil {
+			rowMap[next.location[0]] = []int{next.location[1]}
+		} else {
+			rowMap[next.location[0]] = append(rowMap[next.location[0]], next.location[1])
+		}
+	}
 
 	stepMap[fmt.Sprintf("%d|%d", next.location[0], next.location[1])] = 1
 
 	if next.instruction == "S" {
-		return totalSteps, next, stepMap
+		return totalSteps, next, stepMap, rowMap
 	} else {
 
 		var nextSourceDir int
-		var inst = instructionMap[next.instruction]
 
 		var nextLocation = []int{
 			next.location[0],
 			next.location[1],
 		}
 
-		for i, value := range inst {
+		for i, value := range instructionMap[next.instruction] {
 			if value != 0 && i != next.sourceDir {
 				if i == DirectionTop {
 					nextLocation[0] -= value
@@ -65,18 +73,17 @@ func getNextStep(maze [][]string, next Step, totalSteps int, stepMap map[string]
 			}
 		}
 
-		var nextInstruction = maze[nextLocation[0]][nextLocation[1]]
 		var nextStep = Step{
-			instruction: nextInstruction,
+			instruction: maze[nextLocation[0]][nextLocation[1]],
 			location:    nextLocation,
 			sourceDir:   nextSourceDir,
 		}
 
-		return getNextStep(maze, nextStep, totalSteps, stepMap)
+		return getNextStep(maze, nextStep, totalSteps, stepMap, rowMap)
 	}
 }
 
-func getTotalSteps(maze [][]string, start []int) int {
+func getTotalSteps(maze [][]string, start []int) (int, int) {
 	var nextStep Step
 
 	var topNeighbour, rightNeighbour, bottomNeighbour, leftNeighbour Step
@@ -128,12 +135,15 @@ func getTotalSteps(maze [][]string, start []int) int {
 		}
 	}
 
-	stepsNeeded, _, stepMap := getNextStep(maze, nextStep, 0, make(map[string]int, 0))
+	var initialRowMap = make(map[int][]int, 0)
+	initialRowMap[start[0]] = []int{start[1]}
 
-	// Just for visualizing the maze
-	for key, value := range maze {
-		for index, char := range value {
-			foo := fmt.Sprintf("%d|%d", key, index)
+	stepsNeeded, _, stepMap, rowMap := getNextStep(maze, nextStep, 0, make(map[string]int, 0), initialRowMap)
+	var enclosedTiles = 0
+
+	for rowIndex, value := range maze {
+		for charIndex, char := range value {
+			foo := fmt.Sprintf("%d|%d", rowIndex, charIndex)
 			yellow := color.New(color.FgYellow).SprintFunc()
 			red := color.New(color.FgRed).SprintFunc()
 			white := color.New(color.FgWhite).SprintFunc()
@@ -162,22 +172,32 @@ func getTotalSteps(maze [][]string, start []int) int {
 
 				fmt.Printf("%s", yellow(char))
 			} else {
+				if rowMap[rowIndex] != nil {
+					sort.Ints(rowMap[rowIndex])
+
+					for rowMapIndex := range rowMap[rowIndex] {
+						if rowMapIndex > 0 {
+							if rowMapIndex%2 != 0 {
+
+								if charIndex > rowMap[rowIndex][rowMapIndex-1] && charIndex < rowMap[rowIndex][rowMapIndex] {
+									enclosedTiles += 1
+									char = "0"
+									break
+								}
+							}
+						}
+					}
+				}
 				fmt.Printf("%s", white(char))
-
 			}
-
 		}
-
 		fmt.Print("\n")
 	}
-
-	// divide by 2 because we're counting steps to the farthest location and back
-	fmt.Printf("---- \n steps needed: %+v \n", stepsNeeded/2)
-	fmt.Printf("---- \n steps map: %+v \n", stepMap)
-	return stepsNeeded / 2
+	fmt.Print("\n")
+	return stepsNeeded / 2, enclosedTiles
 }
 
-func StepsToFarthestLocation(input []string) int {
+func StepsToFarthestLocation(input []string) (int, int) {
 	var maze [][]string
 	var start []int
 	for lineIndex, line := range input {
@@ -187,7 +207,6 @@ func StepsToFarthestLocation(input []string) int {
 				start = []int{lineIndex, charIndex}
 			}
 		}
-		// fmt.Printf("%+v \n", newLine)
 		maze = append(maze, newLine)
 	}
 	return getTotalSteps(maze, start)
