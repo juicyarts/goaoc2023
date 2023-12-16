@@ -51,53 +51,83 @@ func variantHasValidAmountOfGroups(variant string, damagedSpringGroups []string)
 	return hasValidAmountOfGroups
 }
 
-func CalculateMatches(record string, damagedSpringGroups []string) int {
+func CalculateMatches(record string, damagedSpringGroups []string, validVariantMap map[string]bool, shouldAddToMap bool) int {
 	var stringHasJoker = jokerRegex.MatchString(record)
 
 	if !stringHasJoker {
 		if variantHasValidAmountOfGroups(record, damagedSpringGroups) {
 			fmt.Print(yellow(record), " ", white(damagedSpringGroups), "\n")
+			if shouldAddToMap {
+				validVariantMap[record] = true
+			}
 			return 1
 		} else {
 			return 0
 		}
 	}
 
+	fmt.Printf("%+v \n", white(record))
+
 	jokerIndex := jokerRegex.FindStringIndex(record)[0]
 	recordA := replaceAtIndex(record, "#", jokerIndex)
-	a := CalculateMatches(recordA, damagedSpringGroups)
+	a := CalculateMatches(recordA, damagedSpringGroups, validVariantMap, shouldAddToMap)
 	recordB := replaceAtIndex(record, ".", jokerIndex)
-	b := CalculateMatches(recordB, damagedSpringGroups)
+	b := CalculateMatches(recordB, damagedSpringGroups, validVariantMap, shouldAddToMap)
 
 	return a + b
 }
 
-func GetNumberOfArrangements(input string) int {
-	var conditionRecord = strings.Split(input, " ")[0]
-	var damagedSpringGroups = strings.Split(strings.Split(input, " ")[1], ",")
+func makeVariantCopies(variant string, copyAmount int, validVariants map[string]bool, copies []string, damagedSpringGroups []string) int {
+	matches := 0
 
-	fmt.Printf("------------------------------------------------------\n")
-	fmt.Printf("Record: %s %s \n", conditionRecord, damagedSpringGroups)
-	var matches = CalculateMatches(conditionRecord, damagedSpringGroups)
-	fmt.Printf("%d Total Matches \n", matches)
-	fmt.Printf("--------------------\n")
+	if copyAmount == 0 {
+		matches += CalculateMatches(variant, damagedSpringGroups, validVariants, false)
+		return matches
+	}
+
+	for validVariantOut := range validVariants {
+		matches += makeVariantCopies(variant+"?"+validVariantOut, copyAmount-1, validVariants, copies, damagedSpringGroups)
+	}
 
 	return matches
 }
 
-func GetTotalNumberOfArrangements(input []string) int {
-	var totalNumberOfArrangements = 0
+func GetNumberOfArrangements(input string) (int, int) {
+	var conditionRecord = strings.Split(input, " ")[0]
+	var damagedSpringGroups = strings.Split(strings.Split(input, " ")[1], ",")
+	var validVariantMap = make(map[string]bool)
+
+	var simpleMatches = CalculateMatches(conditionRecord, damagedSpringGroups, validVariantMap, true)
+	var complexMatches = 0
+	var newDamagedSpringGroups = []string{}
+	for i := 0; i < 5; i++ {
+		newDamagedSpringGroups = append(newDamagedSpringGroups, damagedSpringGroups...)
+	}
+
+	for key := range validVariantMap {
+		complexMatches += makeVariantCopies(key, 4, validVariantMap, []string{}, newDamagedSpringGroups)
+	}
+
+	fmt.Printf("%+v %+v \n", simpleMatches, complexMatches)
+
+	return simpleMatches, complexMatches
+}
+
+func GetTotalNumberOfArrangements(input []string) (int, int) {
+	var result = []int{}
 	var wg sync.WaitGroup
 
 	for _, record := range input {
 		wg.Add(1)
 		go func(record string) {
 			defer wg.Done()
-			totalNumberOfArrangements += GetNumberOfArrangements(record)
+			simpleMatches, complexMatches := GetNumberOfArrangements(record)
+			result[0] += simpleMatches
+			result[1] += complexMatches
 		}(record)
 	}
 
 	wg.Wait()
 
-	return totalNumberOfArrangements
+	return result[0], result[1]
 }
