@@ -1,6 +1,7 @@
 {
   "[go]": {
     "editor.formatOnSave": false,
-    "editor.defaultFormatter": "golang.go"
-  }
+    "editor.defaultFormatter": "golang.go",
+  },
+  "go.formatTool": "gofmt"
 }
