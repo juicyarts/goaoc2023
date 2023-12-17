@@ -2,132 +2,100 @@ package day12
 
 import (
 	"fmt"
-	"regexp"
 	"strconv"
 	"strings"
 	"sync"
-
-	"github.com/fatih/color"
 )
 
-var yellow = color.New(color.FgYellow).SprintFunc()
-var white = color.New(color.FgWhite).SprintFunc()
+func Count(record string, defects []int, cache map[string]int) int {
+	key := record + strings.Join(strings.Fields(fmt.Sprint(defects)), "")
 
-func replaceAtIndex(s string, replacement string, index int) string {
-	return s[:index] + replacement + s[index+1:]
-}
-
-var jokerRegex = regexp.MustCompile(`\?`)
-
-func variantHasValidAmountOfGroups(variant string, damagedSpringGroups []string) bool {
-	normalizedVariant := strings.ReplaceAll(variant, "?", ".")
-	var variantAsArray = strings.Split(normalizedVariant, ".")
-
-	hasValidAmountOfGroups := false
-	variantPartsWithoutEmpty := []string{}
-
-	for _, variantPart := range variantAsArray {
-		if variantPart == "" {
-			continue
-		}
-
-		variantPartsWithoutEmpty = append(variantPartsWithoutEmpty, variantPart)
-	}
-
-	if len(variantPartsWithoutEmpty) != len(damagedSpringGroups) {
-		return false
-	}
-
-	for variantIndex, variantPart := range variantPartsWithoutEmpty {
-		var damagedSpringGroupSize, _ = strconv.Atoi(damagedSpringGroups[variantIndex])
-		if len(variantPart) != damagedSpringGroupSize {
-			hasValidAmountOfGroups = false
-			break
-		} else {
-			hasValidAmountOfGroups = true
-		}
-	}
-
-	return hasValidAmountOfGroups
-}
-
-func CalculateMatches(record string, damagedSpringGroups []string, validVariantMap map[string]bool, shouldAddToMap bool) int {
-	var stringHasJoker = jokerRegex.MatchString(record)
-
-	if !stringHasJoker {
-		if variantHasValidAmountOfGroups(record, damagedSpringGroups) {
-			fmt.Print(yellow(record), " ", white(damagedSpringGroups), "\n")
-			if shouldAddToMap {
-				validVariantMap[record] = true
-			}
+	if record == "" {
+		if len(defects) == 0 {
 			return 1
-		} else {
+		}
+		return 0
+	}
+
+	if len(defects) == 0 {
+		if strings.Contains(record, "#") {
 			return 0
 		}
+		return 1
 	}
 
-	fmt.Printf("%+v \n", white(record))
+	if val, ok := cache[key]; ok {
+		return val
+	}
 
-	jokerIndex := jokerRegex.FindStringIndex(record)[0]
-	recordA := replaceAtIndex(record, "#", jokerIndex)
-	a := CalculateMatches(recordA, damagedSpringGroups, validVariantMap, shouldAddToMap)
-	recordB := replaceAtIndex(record, ".", jokerIndex)
-	b := CalculateMatches(recordB, damagedSpringGroups, validVariantMap, shouldAddToMap)
+	result := 0
 
-	return a + b
+	if strings.Contains(".?", string(record[0])) {
+		result += Count(record[1:], defects, cache)
+	}
+
+	if strings.Contains("#?", string(record[0])) {
+		if defects[0] <= len(record) &&
+			!strings.Contains(record[:defects[0]], ".") &&
+			(defects[0] == len(record) || record[defects[0]] != '#') {
+			if len(record) == defects[0]+1 && len(defects) == 1 ||
+				len(record) == defects[0] && len(defects) == 1 {
+				result += Count("", []int{}, cache)
+			} else {
+				if len(record) > defects[0]+1 && len(defects) > 1 || len(record) >= defects[0]+1 {
+					result += Count(record[defects[0]+1:], defects[1:], cache)
+				}
+			}
+		}
+	}
+
+	fmt.Printf("RESULT For '%+v' with Defects: %+v, %+v \n", record, defects, result)
+	cache[key] = result
+	return result
 }
 
-func makeVariantCopies(variant string, copyAmount int, validVariants map[string]bool, copies []string, damagedSpringGroups []string) int {
-	matches := 0
+func stringListToArr(input string) []int {
+	var result []int
+	var inputAsArray = strings.Split(input, ",")
 
-	if copyAmount == 0 {
-		matches += CalculateMatches(variant, damagedSpringGroups, validVariants, false)
-		return matches
+	for _, item := range inputAsArray {
+		var itemAsInt, _ = strconv.Atoi(item)
+		result = append(result, itemAsInt)
 	}
 
-	for validVariantOut := range validVariants {
-		matches += makeVariantCopies(variant+"?"+validVariantOut, copyAmount-1, validVariants, copies, damagedSpringGroups)
-	}
-
-	return matches
+	return result
 }
 
-func GetNumberOfArrangements(input string) (int, int) {
-	var conditionRecord = strings.Split(input, " ")[0]
-	var damagedSpringGroups = strings.Split(strings.Split(input, " ")[1], ",")
-	var validVariantMap = make(map[string]bool)
+func GetNumberOfArrangements(input string) int {
+	var record = strings.Split(input, " ")[0]
+	var damagedSpringGroups = stringListToArr(strings.Split(input, " ")[1])
+	// var damagedSpringGroupsRepeated []int
+	var cache = make(map[string]int)
 
-	var simpleMatches = CalculateMatches(conditionRecord, damagedSpringGroups, validVariantMap, true)
-	var complexMatches = 0
-	var newDamagedSpringGroups = []string{}
-	for i := 0; i < 5; i++ {
-		newDamagedSpringGroups = append(newDamagedSpringGroups, damagedSpringGroups...)
-	}
+	// record = strings.Join([]string{record, record, record, record, record}, "?")
+	// for i := 0; i < 5; i++ {
+	// 	damagedSpringGroupsRepeated = append(damagedSpringGroupsRepeated, damagedSpringGroups...)
+	// }
 
-	for key := range validVariantMap {
-		complexMatches += makeVariantCopies(key, 4, validVariantMap, []string{}, newDamagedSpringGroups)
-	}
+	var numberOfArragements = Count(record, damagedSpringGroups, cache)
 
-	fmt.Printf("%+v %+v \n", simpleMatches, complexMatches)
-
-	return simpleMatches, complexMatches
+	return numberOfArragements
 }
 
-func GetTotalNumberOfArrangements(input []string) (int, int) {
-	var result = []int{}
+func GetTotalNumberOfArrangements(input []string) int {
+	var totalMatches = 0
 	var wg sync.WaitGroup
 
 	for _, record := range input {
 		wg.Add(1)
 		go func(record string) {
 			defer wg.Done()
-			simpleMatches, complexMatches := GetNumberOfArrangements(record)
-			result[0] += simpleMatches
-			result[1] += complexMatches
+			totalMatches += GetNumberOfArrangements(record)
+
 		}(record)
 	}
 
 	wg.Wait()
 
-	return result[0], result[1]
+	return totalMatches
 }
