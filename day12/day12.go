@@ -7,6 +7,9 @@ import (
 	"sync"
 )
 
+// shamefully translated from https://github.com/hyper-neutrino/advent-of-code/blob/main/2023/day12p2.py
+// much more efficient than generating all the possible combinations as in my initial attempt
+// even tho it looked funnier
 func Count(record string, defects []int, cache map[string]int) int {
 	key := record + strings.Join(strings.Fields(fmt.Sprint(defects)), "")
 
@@ -38,8 +41,8 @@ func Count(record string, defects []int, cache map[string]int) int {
 		if defects[0] <= len(record) &&
 			!strings.Contains(record[:defects[0]], ".") &&
 			(defects[0] == len(record) || record[defects[0]] != '#') {
-			if len(record) == defects[0]+1 && len(defects) == 1 ||
-				len(record) == defects[0] && len(defects) == 1 {
+			if len(defects) == 1 && (len(record) == defects[0]+1 ||
+				len(record) == defects[0]) {
 				result += Count("", []int{}, cache)
 			} else {
 				if len(record) > defects[0]+1 && len(defects) > 1 || len(record) >= defects[0]+1 {
@@ -49,7 +52,6 @@ func Count(record string, defects []int, cache map[string]int) int {
 		}
 	}
 
-	fmt.Printf("RESULT For '%+v' with Defects: %+v, %+v \n", record, defects, result)
 	cache[key] = result
 	return result
 }
@@ -69,15 +71,15 @@ func stringListToArr(input string) []int {
 func GetNumberOfArrangements(input string) int {
 	var record = strings.Split(input, " ")[0]
 	var damagedSpringGroups = stringListToArr(strings.Split(input, " ")[1])
-	// var damagedSpringGroupsRepeated []int
+	var damagedSpringGroupsRepeated []int
 	var cache = make(map[string]int)
 
-	// record = strings.Join([]string{record, record, record, record, record}, "?")
-	// for i := 0; i < 5; i++ {
-	// 	damagedSpringGroupsRepeated = append(damagedSpringGroupsRepeated, damagedSpringGroups...)
-	// }
+	record = strings.Join([]string{record, record, record, record, record}, "?")
+	for i := 0; i < 5; i++ {
+		damagedSpringGroupsRepeated = append(damagedSpringGroupsRepeated, damagedSpringGroups...)
+	}
 
-	var numberOfArragements = Count(record, damagedSpringGroups, cache)
+	var numberOfArragements = Count(record, damagedSpringGroupsRepeated, cache)
 
 	return numberOfArragements
 }

@@ -18,16 +18,7 @@ var testInput = []string{
 	"?###???????? 3,2,1",
 }
 
-func TestSumOfArrangements5(t *testing.T) {
-	result := GetNumberOfArrangements(testInput[5])
-	expectedResult := 10
-
-	if result != expectedResult {
-		t.Errorf("Expected %+v, got %+v", expectedResult, result)
-	}
-}
-
-func TestCount5(t *testing.T) {
+func TestCount(t *testing.T) {
 	result := Count("????", []int{2, 1}, make(map[string]int))
 	expectedResult := 1
 
@@ -36,9 +27,19 @@ func TestCount5(t *testing.T) {
 	}
 }
 
+func TestSumOfArrangements5(t *testing.T) {
+	result := GetNumberOfArrangements(testInput[5])
+	expectedResult := 506250
+
+	if result != expectedResult {
+		t.Errorf("Expected %+v, got %+v", expectedResult, result)
+	}
+}
+
 func TestTotalNumberOfArrangements(t *testing.T) {
 	result := GetTotalNumberOfArrangements(testInput)
-	expectedResult := 21
+	// expectedResult := 21
+	expectedResult := 525152
 
 	if result != expectedResult {
 		t.Errorf("Expected %+v, got %+v", expectedResult, result)
