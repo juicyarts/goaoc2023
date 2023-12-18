@@ -1,6 +1,6 @@
 module aoc2023/day1
 
-go 1.21.4
+go 1.21.5
 
 replace aoc2023/utils => ../utils
 
