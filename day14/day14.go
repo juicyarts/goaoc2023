@@ -11,7 +11,7 @@ var dotRegex = regexp.MustCompile(`\.`)
 
 func Main(input []string) int {
 	// rotate input anti clockwise two times initially to make sorting easier in general
-	// and becaise Cycle will do one Clockwise rotation before sorting
+	// and because Cycle will do one Clockwise rotation before sorting
 	// might be a bit of overhead but it works
 	rotated := utils.RotateAntiClockWise(utils.RotateAntiClockWise(input))
 	// multiply with 4 for rotations, 1 will only do the first rotation to get the array sideways for easier sorting
@@ -85,18 +85,12 @@ func SortRow(row string) string {
 
 func sortRows(input []string) []string {
 	output := make([]string, len(input))
-
 	if cached, ok := patternCache[strings.Join(input, " ")]; ok {
 		return cached
 	}
-
-	var patternWeight int
-
 	for i, row := range input {
 		output[i] = SortRow(row)
-		patternWeight += calculateWeight(output[i])
 	}
-
 	patternCache[strings.Join(input, " ")] = output
 	return output
 }
