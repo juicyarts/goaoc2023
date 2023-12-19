@@ -22,14 +22,26 @@ var testInput = []string{
 	`..//.|....`,
 }
 
-// func TestMeasureEnergizedTiles(t *testing.T) {
-// 	expected := 46
-// 	actual := MeasureEnergizedTiles(testInput)
+func TestTravel(t *testing.T) {
+	expected := 51
+	travelMap := Travel(testInput, []int{0, 3}, 2, map[string]int{})
+	actual := len(travelMap)
 
-// 	if !reflect.DeepEqual(expected, actual) {
-// 		t.Errorf("Expected %v, got %v", expected, actual)
-// 	}
-// }
+	if actual != expected {
+		t.Errorf("Expected %v, got %v", expected, actual)
+	}
+}
+
+func TestMeasureEnergizedTiles(t *testing.T) {
+	godotenv.Load()
+	expected := 51
+
+	result := MeasureEnergizedTiles(testInput)
+
+	if result != expected {
+		t.Errorf("Expected to equal %+v, got %+v", expected, result)
+	}
+}
 
 func TestMeasureEnergizedTilesWithInput(t *testing.T) {
 	godotenv.Load()
@@ -39,6 +51,6 @@ func TestMeasureEnergizedTilesWithInput(t *testing.T) {
 	result := MeasureEnergizedTiles(Input)
 
 	if result != expected {
-		t.Errorf("Expected to be higher than %+v, got %+v", expected, result)
+		t.Errorf("Expected to equal %+v, got %+v", expected, result)
 	}
 }
