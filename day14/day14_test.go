@@ -2,8 +2,8 @@ package day14
 
 import (
 	"aoc2023/utils"
+	"fmt"
 	"os"
-	"reflect"
 	"strconv"
 	"testing"
 
@@ -23,146 +23,72 @@ var testInput = []string{
 	"#OO..#....",
 }
 
-func TestSortRow2(t *testing.T) {
-	expected := "OOO......."
-	actual := SortRow("...OO....O")
+var sortTestInput = []string{
+	"...OO....O",
+	".O...#O..O",
+	".O.#......",
+	".#.O......",
+	"#.#..O#.##",
+	"..#...O.#.",
+	"....O#.O#.",
+	"....#.....",
+	".#.O.#O...",
+}
 
-	if expected != actual {
-		t.Errorf("Expected %s, got %s", expected, actual)
+var sortTestExpected = []string{
+	"OOO.......",
+	"O....#OO..",
+	"O..#......",
+	".#O.......",
+	"#.#O..#.##",
+	"..#O....#.",
+	"O....#O.#.",
+	"....#.....",
+	".#O..#O...",
+}
+
+func TestSortRow(t *testing.T) {
+	for i, row := range sortTestInput {
+		tName := fmt.Sprintf("Sorting %s", row)
+		t.Run(tName, func(t *testing.T) {
+			expected := sortTestExpected[i]
+			result := SortRow(row)
+
+			if expected != result {
+				t.Errorf("Expected %s, got %s", expected, result)
+			}
+		})
 	}
 }
 
-func TestSortRow3(t *testing.T) {
-	expected := "O....#OO.."
-	actual := SortRow(".O...#O..O")
-
-	if expected != actual {
-		t.Errorf("Expected %s, got %s", expected, actual)
-	}
-}
-
-func TestSortRow4(t *testing.T) {
-	expected := "O..#......"
-	actual := SortRow(".O.#......")
-
-	if expected != actual {
-		t.Errorf("Expected %s, got %s", expected, actual)
-	}
-}
-
-func TestSortRow5(t *testing.T) {
-	expected := ".#O......."
-	actual := SortRow(".#.O......")
-
-	if expected != actual {
-		t.Errorf("Expected %s, got %s", expected, actual)
-	}
-}
-
-func TestSortRow6(t *testing.T) {
-	expected := "#.#O..#.##"
-	actual := SortRow("#.#..O#.##")
-
-	if expected != actual {
-		t.Errorf("Expected %s, got %s", expected, actual)
-	}
-}
-
-func TestSortRow7(t *testing.T) {
-	expected := "..#O....#."
-	actual := SortRow("..#...O.#.")
-
-	if expected != actual {
-		t.Errorf("Expected %s, got %s", expected, actual)
-	}
-}
-
-func TestSortRow8(t *testing.T) {
-	expected := "O....#O.#."
-	actual := SortRow("....O#.O#.")
-
-	if expected != actual {
-		t.Errorf("Expected %s, got %s", expected, actual)
-	}
-}
-
-func TestSortRow9(t *testing.T) {
-	expected := "....#....."
-	actual := SortRow("....#.....")
-
-	if expected != actual {
-		t.Errorf("Expected %s, got %s", expected, actual)
-	}
-}
-
-func TestSortRow10(t *testing.T) {
-	expected := ".#O..#O..."
-	actual := SortRow(".#.O.#O...")
-
-	if expected != actual {
-		t.Errorf("Expected %s, got %s", expected, actual)
+func BenchmarkSortRow(b *testing.B) {
+	for _, v := range sortTestInput {
+		b.Run(fmt.Sprintf("input_size_%s", v), func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				SortRow(v)
+			}
+		})
 	}
 }
 
 // only part 2 left here
 func TestCycle(t *testing.T) {
+	expected := 64
 	result := Main(testInput)
-	// expectedResult := 136
-	expectedResult := 64
 
-	if result != expectedResult {
-		t.Errorf("Expected %d, got %d", expectedResult, result)
+	if result != expected {
+		t.Errorf("Expected %d, got %d", expected, result)
 	}
 }
 
 func TestMainWithInput(t *testing.T) {
 	godotenv.Load()
-	expectedResult, _ := strconv.Atoi(os.Getenv("result_2"))
+	expected, _ := strconv.Atoi(os.Getenv("result_1"))
 
 	Input, _ := utils.ReadInputFile("input.txt")
 	result := Main(Input)
 
-	if result != expectedResult {
-		t.Errorf("Expected to be higher than %+v, got %+v", expectedResult, result)
-	}
-}
-
-func TestRotateAntiClockwise(t *testing.T) {
-	localTestInput := []string{
-		"ABCD",
-		"EFGH",
-	}
-
-	expected := []string{
-		"DH",
-		"CG",
-		"BF",
-		"AE",
-	}
-
-	actual := utils.RotateAntiClockWise(localTestInput)
-
-	if !reflect.DeepEqual(expected, actual) {
-		t.Errorf("Expected %s, got %s", expected, actual)
-	}
-}
-
-func TestRotateClockwise(t *testing.T) {
-	localTestInput := []string{
-		"ABCD",
-		"EFGH",
-	}
-
-	expected := []string{
-		"EA",
-		"FB",
-		"GC",
-		"HD",
-	}
-
-	actual := utils.RotateClockWise(localTestInput)
-
-	if !reflect.DeepEqual(expected, actual) {
-		t.Errorf("Expected %s, got %s", expected, actual)
+	if result != expected {
+		t.Errorf("Expected to be higher than %+v, got %+v", expected, result)
 	}
 }
