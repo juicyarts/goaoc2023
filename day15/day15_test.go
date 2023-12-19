@@ -4,6 +4,7 @@ import (
 	"aoc2023/utils"
 	"os"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/joho/godotenv"
@@ -11,7 +12,7 @@ import (
 
 var testInput = "rn=1,cm-,qp=3,cm=2,qp-,pc=4,ot=9,ab=5,pc-,pc=6,ot=7\n"
 
-var testInputAsArray = []string{"rn=1", "cm-", "qp=3", "cm=2", "qp-", "pc=4", "ot=9", "ab=5", "pc-", "pc=6", "ot=7"}
+var testInputAsArray = strings.Split(strings.Split(testInput, "\n")[0], ",")
 var expectations = []int{
 	30,
 	253,
@@ -47,7 +48,16 @@ func TestHashing2(t *testing.T) {
 func TestHashSum(t *testing.T) {
 	expectation := 1320
 
-	result := HashSum(testInput)
+	result, _ := HashSum(testInput)
+	if result != expectation {
+		t.Errorf("Expected %+v got %v", expectation, result)
+	}
+}
+
+func TestFocalPower(t *testing.T) {
+	expectation := 145
+
+	_, result := HashSum(testInput)
 	if result != expectation {
 		t.Errorf("Expected %+v got %v", expectation, result)
 	}
@@ -58,7 +68,19 @@ func TestHashWithInput(t *testing.T) {
 	expected, _ := strconv.Atoi(os.Getenv("result_1"))
 
 	Input, _ := utils.ReadInputFile("input.txt")
-	result := HashSum(Input[0])
+	result, _ := HashSum(Input[0])
+
+	if result != expected {
+		t.Errorf("Expected to be higher than %+v, got %+v", expected, result)
+	}
+}
+
+func TestFocalPowerWithInput(t *testing.T) {
+	godotenv.Load()
+	expected, _ := strconv.Atoi(os.Getenv("result_2"))
+
+	Input, _ := utils.ReadInputFile("input.txt")
+	_, result := HashSum(Input[0])
 
 	if result != expected {
 		t.Errorf("Expected to be higher than %+v, got %+v", expected, result)
