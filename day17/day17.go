@@ -24,9 +24,20 @@ var directionOppositionMap = map[int]int{
 
 type Node struct {
 	next          []int
-	direction     int
 	localDistance int
+	distance      int
 	heat          int
+	path          [][]int
+}
+
+func pathContainsLocation(path [][]int, location []int) bool {
+	for i := 0; i < len(path); i++ {
+		if path[i][0] == location[0] && path[i][1] == location[1] {
+			return true
+		}
+	}
+
+	return false
 }
 
 type PriorityQueue []*Node
@@ -59,10 +70,11 @@ func Travel(input []string, start []int, minDistance, maxDistance int) int {
 
 	var pq = PriorityQueue{
 		&Node{
-			next:          start,
-			direction:     1,
+			next:          append(start, 1), // one for left to right
 			localDistance: 0,
+			distance:      0,
 			heat:          0,
+			path:          [][]int{},
 		},
 	}
 
@@ -83,15 +95,24 @@ func Travel(input []string, start []int, minDistance, maxDistance int) int {
 		char := input[node.next[0]][node.next[1]]
 		charAsInt, _ := strconv.Atoi(string(char))
 		heat := node.heat + charAsInt
+		node.path = append(node.path, append(node.next, []int{node.localDistance, heat}...))
 
 		if node.next[0] == len(input)-1 && node.next[1] == len(input[0])-1 {
-			fmt.Printf("Found End at %+v, with heat %+v \n", node.next, heat)
+			fmt.Printf("-----------------------\n")
+			fmt.Printf("Found End at %+v, with heat %+v, travel distance: %+v \n", node.next, heat, node.distance)
+			fmt.Print(node.path)
+			drawTileMap(input, node.path)
 			return heat
 		}
 
 		for dirIndex := 0; dirIndex < len(directions); dirIndex++ {
-			next := directionToNext[directions[dirIndex]]
-			nodeKey := fmt.Sprintf("%v%v", next, directions[dirIndex])
+			next := append(directionToNext[directions[dirIndex]], directions[dirIndex])
+			nodeKey := fmt.Sprintf("%v", next)
+
+			fmt.Print("KEY: ", nodeKey)
+
+			isOutOfBounds := next[0] < 0 || next[1] < 0 || next[0] > len(input)-1 || next[1] > len(input[0])-1
+			isInOppositeDirection := directions[dirIndex] == directionOppositionMap[node.next[2]]
 
 			if previousHeat, ok := visited[nodeKey]; ok {
 				if previousHeat <= heat {
@@ -99,43 +120,78 @@ func Travel(input []string, start []int, minDistance, maxDistance int) int {
 				}
 			}
 
-			// if direction is opposite of previous direction, skip
-			if directions[dirIndex] == directionOppositionMap[node.direction] {
+			if isOutOfBounds || isInOppositeDirection {
 				continue
 			}
 
-			// if direction is same as previous direction and local distance is greater than max distance, skip
-			if node.localDistance > maxDistance {
-				continue
-			}
-
-			// if input borders are reached, skip
-			if directions[dirIndex] == 0 && next[0] < 0 || directions[dirIndex] == 3 && next[1] < 0 ||
-				directions[dirIndex] == 1 && next[1] > len(input[0])-1 ||
-				directions[dirIndex] == 2 && next[0] > len(input)-1 {
-				continue
-			}
-
-			visited[nodeKey] = heat
 			localDistance := node.localDistance
 
-			if directions[dirIndex] != node.direction {
-				localDistance = 0
+			if !pathContainsLocation(node.path, next) {
+				node.distance += 1
+			}
+
+			if directions[dirIndex] != node.next[2] {
+				localDistance = 1
 			} else {
 				localDistance += 1
 			}
 
-			node := &Node{
-				next:          next,
-				direction:     directions[dirIndex],
-				localDistance: localDistance,
-				heat:          heat,
+			// If localDistance is less than minDistance or greater than maxDistance, skip this direction
+			if localDistance < minDistance || localDistance > maxDistance {
+				continue
 			}
 
-			heap.Push(&pq, node)
-		}
+			visited[nodeKey] = heat
 
+			if localDistance > maxDistance && directions[dirIndex] != node.next[2] {
+				heap.Push(&pq, &Node{
+					next:          next, // change direction
+					localDistance: 1,    // reset localDistance
+					heat:          heat,
+					path:          node.path,
+					distance:      node.distance,
+				})
+			} else {
+				heap.Push(&pq, &Node{
+					next:          []int{next[0], next[1], node.next[2]}, // keep same direction
+					localDistance: localDistance,
+					heat:          heat,
+					path:          node.path,
+					distance:      node.distance,
+				})
+			}
+		}
 	}
 
 	panic("No path found")
+}
+
+// vis unreliable again, but fun :/
+func drawTileMap(input []string, visisted [][]int) {
+
+	// fmt.Printf("-----------------------\n")
+	printString := "\n"
+	evenTab := "	"
+
+	highlightCount := 0
+
+	for lineIndex := 0; lineIndex < len(input); lineIndex++ {
+		line := input[lineIndex]
+		printString += evenTab
+		for charIndex := 0; charIndex < len(line); charIndex++ {
+			char := line[charIndex]
+			if pathContainsLocation(visisted, []int{lineIndex, charIndex}) {
+				printString += tertiary(string(char))
+				highlightCount += 1
+			} else {
+				printString += primary(string(char))
+			}
+		}
+		printString += "\n"
+	}
+	fmt.Print(printString)
+	fmt.Print("\n")
+	// fmt.Print(visisted, "\n")
+	fmt.Printf("Highlight Counter (to show diff between viz and actual distance): %+v \n", highlightCount)
+	fmt.Printf("-----------------------\n")
 }

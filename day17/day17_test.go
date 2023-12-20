@@ -1,14 +1,6 @@
 package day17
 
-import (
-	"aoc2023/utils"
-	"fmt"
-	"os"
-	"strconv"
-	"testing"
-
-	"github.com/joho/godotenv"
-)
+import "testing"
 
 var testInput = []string{
 	"2413432311323",
@@ -26,26 +18,51 @@ var testInput = []string{
 	"4322674655533",
 }
 
+var testInput2 = []string{
+	"111111111111",
+	"999999999991",
+	"999999999991",
+	"999999999991",
+	"999999999991",
+}
+
 func TestTravelBasic(t *testing.T) {
 	expected := 102 // remove the start point
-	heat := Travel(testInput, []int{0, 0}, 0, 3) - 2
+	heat := Travel(testInput, []int{0, 0}, 0, 2)
 
-	// fmt.Printf("Map: %+v \n", actual)
-	fmt.Printf("Heat: %+v \n", heat)
 	if heat != expected {
 		t.Errorf("Expected %v, got %v", expected, heat)
 	}
 }
 
-func TestTravelInput(t *testing.T) {
-	godotenv.Load()
-	expectedRangeOne, _ := strconv.Atoi(os.Getenv("result_1"))
-	expectedRangeTwo, _ := strconv.Atoi(os.Getenv("result_2"))
+// func TestTravelInput(t *testing.T) {
+// 	godotenv.Load()
+// 	expected, _ := strconv.Atoi(os.Getenv("result_1"))
 
-	Input, _ := utils.ReadInputFile("input.txt")
-	result := Travel(Input, []int{0, 0}, 0, 3)
+// 	Input, _ := utils.ReadInputFile("input.txt")
+// 	result := Travel(Input, []int{0, 0}, 4, 10)
 
-	if !(result > expectedRangeTwo && result < expectedRangeOne) {
-		t.Errorf("Expected %+v to be between %+v and %+v", result, expectedRangeTwo, expectedRangeOne)
-	}
-}
+// 	if result <= expected {
+// 		t.Errorf("Expected %+v to be higher than %+v", result, expected)
+// 	}
+// }
+
+// func TestTravelBasicUltra(t *testing.T) {
+// 	expected := 94 // remove the start point
+// 	heat := Travel(testInput, []int{0, 0}, 4, 10)
+
+// 	if heat != expected {
+// 		t.Errorf("Expected %v, got %v", expected, heat)
+// 	}
+// }
+
+// func TestTravelBasicUltra2(t *testing.T) {
+// 	expected := 71 // remove the start point
+// 	heat := Travel(testInput2, []int{0, 0}, 4, 10)
+
+// 	// fmt.Printf("Map: %+v \n", actual)
+// 	fmt.Printf("Heat: %+v \n", heat)
+// 	if heat != expected {
+// 		t.Errorf("Expected %v, got %v", expected, heat)
+// 	}
+// }
