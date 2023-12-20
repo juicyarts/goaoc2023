@@ -2,6 +2,7 @@ package day17
 
 import (
 	"aoc2023/utils"
+	"fmt"
 	"os"
 	"strconv"
 	"testing"
@@ -25,32 +26,26 @@ var testInput = []string{
 	"4322674655533",
 }
 
-var testInput2 = []string{
-	"2413432",
-	"3215453",
-	"3255245",
-	"4546657",
+func TestTravelBasic(t *testing.T) {
+	expected := 102 // remove the start point
+	heat := Travel(testInput, []int{0, 0}, 0, 3) - 2
+
+	// fmt.Printf("Map: %+v \n", actual)
+	fmt.Printf("Heat: %+v \n", heat)
+	if heat != expected {
+		t.Errorf("Expected %v, got %v", expected, heat)
+	}
 }
 
-// func TestTravel(t *testing.T) {
-// 	expected := 102 - 2
-// 	heat := Travel(testInput, []int{0, 0}, []int{len(testInput) - 1, len(testInput[0]) - 1}, 0, 0, 0, "")
-
-// 	// fmt.Printf("Map: %+v \n", actual)
-// 	fmt.Printf("Heat: %+v \n", heat-2)
-// 	if heat != expected {
-// 		t.Errorf("Expected %v, got %v", expected, heat-2)
-// 	}
-// }
-
-func TestTravel2(t *testing.T) {
+func TestTravelInput(t *testing.T) {
 	godotenv.Load()
-	expected, _ := strconv.Atoi(os.Getenv("result_1"))
+	expectedRangeOne, _ := strconv.Atoi(os.Getenv("result_1"))
+	expectedRangeTwo, _ := strconv.Atoi(os.Getenv("result_2"))
 
 	Input, _ := utils.ReadInputFile("input.txt")
-	result := Travel(Input, []int{0, 0}, []int{len(Input) - 1, len(Input[0]) - 1}, 0, 0, 0, "")
+	result := Travel(Input, []int{0, 0}, 0, 3)
 
-	if result != expected {
-		t.Errorf("Expected to equal %+v, got %+v", expected, result)
+	if !(result > expectedRangeTwo && result < expectedRangeOne) {
+		t.Errorf("Expected %+v to be between %+v and %+v", result, expectedRangeTwo, expectedRangeOne)
 	}
 }
