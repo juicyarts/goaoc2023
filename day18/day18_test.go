@@ -1,7 +1,12 @@
 package day18
 
 import (
+	"aoc2023/utils"
+	"os"
+	"strconv"
 	"testing"
+
+	"github.com/joho/godotenv"
 )
 
 var testInput = []string{
@@ -19,19 +24,6 @@ var testInput = []string{
 	"U 3 (#a77fa3)",
 	"L 2 (#015232)",
 	"U 2 (#7a21e3)",
-}
-
-var testResult1 = []string{
-	"#######",
-	"#.....#",
-	"###...#",
-	"..#...#",
-	"..#...#",
-	"###.###",
-	"#...#..",
-	"##..###",
-	".#....#",
-	".######",
 }
 
 func TestMakeGrid(t *testing.T) {
@@ -52,14 +44,14 @@ func TestGridDimension(t *testing.T) {
 	}
 }
 
-// func TestTravelWithInput(t *testing.T) {
+func TestTravelWithInput(t *testing.T) {
+	godotenv.Load()
+	expected, _ := strconv.Atoi(os.Getenv("result_1"))
 
-// 	expected := [][]int{}
+	Input, _ := utils.ReadInputFile("input.txt")
+	_, result := Travel(Input)
 
-// 	Input, _ := utils.ReadInputFile("input.txt")
-// 	result, _ := Travel(Input)
-
-// 	if result == 0 {
-// 		t.Errorf("Expected to equal %+v, got %+v", expected, result)
-// 	}
-// }
+	if result != expected {
+		t.Errorf("Expected to equal %+v, got %+v", expected, result)
+	}
+}
