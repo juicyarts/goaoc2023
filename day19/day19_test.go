@@ -1,7 +1,12 @@
 package day19
 
 import (
+	"aoc2023/utils"
+	"os"
+	"strconv"
 	"testing"
+
+	"github.com/joho/godotenv"
 )
 
 var testInput = []string{
@@ -24,15 +29,6 @@ var testInput = []string{
 	"{x=2127,m=1623,a=2188,s=1013}",
 }
 
-// func TestMain(t *testing.T) {
-// 	expected := 19114
-// 	_, _, actual := Main(testInput)
-
-// 	if actual != expected {
-// 		t.Errorf("Expected %+v, got %+v", expected, actual)
-// 	}
-// }
-
 func TestMainDistinct(t *testing.T) {
 	expected := 167409079868000
 	_, _, actual := Main(testInput)
@@ -42,14 +38,14 @@ func TestMainDistinct(t *testing.T) {
 	}
 }
 
-// func TestMainWithInput(t *testing.T) {
-// 	godotenv.Load()
-// 	expected, _ := strconv.Atoi(os.Getenv("result_1"))
+func TestMainWithInput(t *testing.T) {
+	godotenv.Load()
+	expected, _ := strconv.Atoi(os.Getenv("result_2"))
 
-// 	Input, _ := utils.ReadInputFile("input.txt")
-// 	_, _, result := Main(Input)
+	Input, _ := utils.ReadInputFile("input.txt")
+	_, _, actual := Main(Input)
 
-// 	if result != expected {
-// 		t.Errorf("Expected to equal %+v, got %+v", expected, result)
-// 	}
-// }
+	if actual != expected {
+		t.Errorf("Expected to equal %+v, got %+v", expected, actual)
+	}
+}

@@ -1,11 +1,11 @@
 package day19
 
 import (
+	"maps"
+	"math"
 	"regexp"
 	"strconv"
 	"strings"
-
-	"github.com/davecgh/go-spew/spew"
 )
 
 var cRegex = regexp.MustCompile(`\<|\>|\=`)
@@ -13,8 +13,9 @@ var cRegex = regexp.MustCompile(`\<|\>|\=`)
 func Main(input []string) (map[string][][]interface{}, []map[string]int, int) {
 	workflows := make(map[string][][]interface{})
 	parts := []map[string]int{}
-
 	target := "wf"
+
+	sum := 0
 
 	for _, line := range input {
 		if line == "" {
@@ -23,7 +24,7 @@ func Main(input []string) (map[string][][]interface{}, []map[string]int, int) {
 		}
 
 		if target == "wf" {
-			wfKey, wf := makeWorkflows(line)
+			wfKey, wf := makeWorkflow(line)
 			workflows[wfKey] = wf
 		} else {
 			pt := makeParts(line)
@@ -31,7 +32,6 @@ func Main(input []string) (map[string][][]interface{}, []map[string]int, int) {
 		}
 	}
 
-	sum := 0
 	for _, part := range parts {
 		result := SortPart(part, "in", workflows)
 		if result == "A" {
@@ -41,23 +41,17 @@ func Main(input []string) (map[string][][]interface{}, []map[string]int, int) {
 		}
 	}
 
-	minMaxMap := map[string][]int{}
+	combinations := findMinMax("in", workflows, map[string][]int{
+		"x": {1, 4000},
+		"m": {1, 4000},
+		"a": {1, 4000},
+		"s": {1, 4000},
+	})
 
-	for key := range workflows {
-		minMaxMap = findMinMax(key, workflows, minMaxMap)
-	}
-
-	diffs := []int{}
-
-	for _, entry := range minMaxMap {
-		diffs = append(diffs, entry[0]-entry[1])
-	}
-
-	spew.Dump(diffs)
-	return workflows, parts, sum
+	return workflows, parts, combinations
 }
 
-func makeWorkflows(l string) (string, [][]interface{}) {
+func makeWorkflow(l string) (string, [][]interface{}) {
 	k := strings.Split(l, "{")[0]
 	v := strings.Replace(strings.Split(l, "{")[1], "}", "", -1)
 	c := strings.Split(v, ",")
@@ -122,40 +116,60 @@ func SortPart(part map[string]int, dest string, workflows map[string][][]interfa
 	panic("No Result found for part")
 }
 
-func findMinMax(dest string, workflows map[string][][]interface{}, minMaxMap map[string][]int) map[string][]int {
-	if dest == "A" || dest == "R" {
-		return minMaxMap
+func findMinMax(dest string, workflows map[string][][]interface{}, minMaxMap map[string][]int) int {
+	if dest == "R" {
+		return 0
 	}
 
-	for _, wf := range workflows {
-		for _, rule := range wf {
-			if len(rule) == 1 {
-				return minMaxMap
+	if dest == "A" {
+		combinations := 1
+		for _, entry := range minMaxMap {
+			lo, hi := entry[0], entry[1]
+			combinations *= int(math.Abs(float64(hi - lo + 1)))
+		}
+
+		return combinations
+	}
+
+	rules := workflows[dest]
+	result := 0
+
+	for i := 0; i < len(rules); i++ {
+		rule := rules[i]
+		nextDest := rule[0]
+		if len(rule) == 1 {
+			result += findMinMax(nextDest.(string), workflows, minMaxMap)
+		} else {
+			nextDest := rule[0]
+			key := rule[1]
+			condition := rule[2]
+			value := rule[3]
+			lo, hi := minMaxMap[key.(string)][0], minMaxMap[key.(string)][1]
+			var a, b []int
+
+			if condition == "<" {
+				a = []int{lo, min(value.(int)-1, hi)}
+				b = []int{max(value.(int), lo), hi}
 			} else {
-				nextDest := rule[0]
-				key := rule[1]
-				condition := rule[2]
-				value := rule[3]
-				if _, ok := minMaxMap[key.(string)]; !ok {
-					minMaxMap[key.(string)] = []int{0, 4000}
-				}
+				a = []int{max(value.(int)+1, lo), hi}
+				b = []int{lo, min(value.(int), hi)}
+			}
 
-				if condition == "<" {
-					if minMaxMap[key.(string)][1] >= value.(int) {
-						minMaxMap[key.(string)][1] = value.(int) - 1
-					}
-				} else {
-					if minMaxMap[key.(string)][0] <= value.(int) {
-						minMaxMap[key.(string)][0] = value.(int) - 1
-					}
-				}
+			if a[0] <= a[1] {
+				copy := maps.Clone(minMaxMap)
+				copy[key.(string)] = a
+				result += findMinMax(nextDest.(string), workflows, copy)
+			}
 
-				minMaxMap = findMinMax(nextDest.(string), workflows, minMaxMap)
+			if b[0] <= b[1] {
+				minMaxMap[key.(string)] = b
+			} else {
+				break
 			}
 		}
 	}
 
-	return minMaxMap
+	return result
 }
 
 func conditionMatches(condition string, a int, b int) bool {
