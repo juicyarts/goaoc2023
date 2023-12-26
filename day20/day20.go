@@ -20,15 +20,6 @@ type CModule struct {
 	memory  map[string]bool
 }
 
-func enqueue(queue []Inst, element Inst) []Inst {
-	queue = append(queue, element)
-	return queue
-}
-
-// func dequeue(queue []Inst) []Inst {
-// 	return queue[:1]
-// }
-
 func MeasurePulses(input []string) int {
 	ffmodules := map[string]FFModule{}
 	cmodules := map[string]CModule{}
@@ -42,7 +33,7 @@ func MeasurePulses(input []string) int {
 
 		if s == "broadcaster" {
 			for _, target := range targets {
-				broadcastInstructions = enqueue(broadcastInstructions, Inst{source: s, target: target, pulse: false})
+				broadcastInstructions = append(broadcastInstructions, Inst{source: s, target: target, pulse: false})
 			}
 		} else if mt == "%" {
 			ffmodules[mk] = FFModule{targets: targets, memory: false}
@@ -73,16 +64,13 @@ func MeasurePulses(input []string) int {
 	var hi, lo int = 0, 0
 	repetition := 1000
 
-	// fmt.Print("FF: ", ffmodules, "\n")
-	// fmt.Print("CM: ", cmodules, "\n")
-
-	for i := 0; i <= repetition; i++ {
+	for i := 0; i < repetition; i++ {
 		lo++
 		instructionQueue := broadcastInstructions
-
+		// fmt.Printf("Repetition No %+v ---------------- \n", i)
 		for j := 0; j < len(instructionQueue); j++ {
 			instruction := instructionQueue[j]
-
+			// fmt.Printf("Instruction %+v \n", instruction)
 			if instruction.pulse {
 				hi++
 			} else {
