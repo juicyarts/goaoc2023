@@ -1,0 +1,739 @@
+package day21
+
+import (
+	"container/heap"
+	"fmt"
+	"math"
+
+	"github.com/fatih/color"
+)
+
+// Flaws with this idea
+// 1. PrioQueue is incorrectly used here, a usual queue/list is more suitable and will deliver proper results
+// 2. calculation of row width differs from other approaches, but seems generally okish
+// 3. calculation of odd/even preferred over "counting", to reduce loop iterations
+// 4. rather than finding an example for each edge type, work with assumed steps for potential edges
+//  	* another downside here is that after we have each edge, we need subtract the step amout left when reaching that edge so
+// 			the solution from part 1 is not really reusable. What is been done differently here is that rather than counting how many
+// 			blocks in an edge are reachable from it's "origin"/Entrance, i count how many non # blocks of even/odd amount are reachable
+// 			given their distance from the starting point, which also assumes that there is "nothing in the way", so off by 1's are expectable
+// 		* Needing to normalize ends up in a collection of conditions depending on where the edge is located and makes things more complicated as well
+// unfortunately some calculations are off, but cleaning this up a bit and fixing some of the flaws can end up in a performant solution
+
+var primary = color.New(color.FgRed).SprintFunc()
+var secondary = color.New(color.FgYellow).SprintFunc()
+var white = color.New(color.FgWhite).SprintFunc()
+
+var directions = []int{
+	0, 1, 2, 3,
+}
+
+type Node struct {
+	next      []int
+	stepsLeft int
+}
+
+type PriorityQueue []*Node
+
+func (pq PriorityQueue) Len() int { return len(pq) }
+
+func (pq PriorityQueue) Less(i, j int) bool {
+	return pq[i].stepsLeft < pq[j].stepsLeft
+}
+
+func (pq PriorityQueue) Swap(i, j int) {
+	pq[i], pq[j] = pq[j], pq[i]
+}
+
+func (pq *PriorityQueue) Push(x any) {
+	item := x.(*Node)
+	*pq = append(*pq, item)
+}
+
+func (pq *PriorityQueue) Pop() interface{} {
+	old := *pq
+	n := len(old)
+	item := old[n-1]
+	old[n-1] = nil
+	*pq = old[0 : n-1]
+	return item
+}
+
+func Travel(input []string, steps int) int {
+	start := []int{0, 0}
+	finalPlots := 0
+
+	for lI, l := range input {
+		for cI, c := range l {
+			if c == 'S' {
+				start = []int{lI, cI}
+			}
+		}
+	}
+
+	finalPlots = Walk(input, start, steps)
+
+	return finalPlots
+}
+
+func getPossibleCount(m []string, start []int, stepsLeft int) int {
+	var pq = PriorityQueue{
+		&Node{
+			next:      start,
+			stepsLeft: stepsLeft,
+		},
+	}
+
+	heap.Init(&pq)
+
+	total := 0
+	// Part 1 solution
+	visited := make(map[string]int)
+	counter := make(map[string]int)
+	ends := make(map[string]int)
+
+	for pq.Len() > 0 {
+		node := heap.Pop(&pq).(*Node)
+		sl := node.stepsLeft - 1
+		nodeKey := fmt.Sprintf("%v|%v", node.next, sl)
+		endNodeKey := fmt.Sprintf("%v", node.next)
+
+		if _, ok := visited[nodeKey]; ok {
+			continue
+		}
+
+		validNeighbours := 0
+
+		var directionToNext = map[int][]int{
+			0: {node.next[0] - 1, node.next[1]},
+			1: {node.next[0], node.next[1] + 1},
+			2: {node.next[0] + 1, node.next[1]},
+			3: {node.next[0], node.next[1] - 1},
+		}
+
+		for dirIndex := 0; dirIndex < len(directions); dirIndex++ {
+			next := directionToNext[directions[dirIndex]]
+			normNext := Normalize(next[0], next[1], len(m), len(m[0]))
+			nextNodeKey := fmt.Sprintf("%v", next)
+			nextChar := m[normNext[0]][normNext[1]]
+
+			if nextChar != '#' {
+				if sl == 0 {
+					if _, ok := counter[nextNodeKey]; !ok {
+						validNeighbours++
+						total++
+						counter[nextNodeKey] = 1
+						ends[endNodeKey] = 1
+					}
+				} else {
+					heap.Push(&pq, &Node{next: next, stepsLeft: sl})
+				}
+			}
+		}
+
+		visited[nodeKey] = validNeighbours
+	}
+
+	return total
+}
+
+func Walk(m []string, start []int, stepsLeft int) int {
+
+	if len(m) != len(m[0]) {
+		panic("Can't do this, the input has no quadrat form")
+	}
+
+	rowWidth := 1
+	colWidth := 1
+
+	if stepsLeft <= len(m) && stepsLeft > (len(m)/2) {
+		rowWidth += 2
+		colWidth += 2
+	} else if stepsLeft > len(m) && stepsLeft/len(m) >= 1 {
+		if stepsLeft%len(m) > len(m)/2 {
+			rowWidth += (stepsLeft/len(m))*2 + 2
+			colWidth += (stepsLeft/len(m))*2 + 2
+		} else {
+			rowWidth += (stepsLeft / len(m)) * 2
+			colWidth += (stepsLeft / len(m)) * 2
+		}
+	}
+
+	newStart := []int{(rowWidth * len(m)) / 2, (colWidth * len(m[0]) / 2)}
+	startingColumn := []int{newStart[0] / len(m), newStart[1] / len(m)}
+
+	evenTile := []int{}
+	oddTile := []int{}
+
+	rth, rtq, rbh, rbq := []int{}, []int{}, []int{}, []int{}
+	lth, ltq, lbh, lbq := []int{}, []int{}, []int{}, []int{}
+	le, re, te, be := []int{}, []int{}, []int{}, []int{}
+
+	// beautiful mess #1
+	for rI := 0; rI < rowWidth; rI++ {
+
+		// if we are done with collecting examples in the upper part
+		if len(evenTile) > 0 &&
+			len(oddTile) > 0 &&
+			len(rth) > 0 &&
+			len(rtq) > 0 &&
+			len(lth) > 0 &&
+			len(ltq) > 0 &&
+			len(te) > 0 {
+
+			fmt.Printf("Upper half done after %+v rows \n", rI)
+			fmt.Printf("%+v,%+v, %+v, %+v, %+v, %+v, %+v \n", evenTile, oddTile, rth, rtq, lth, ltq, te)
+			// jump to the middle to collect if le & re not yet available
+			if rI < rowWidth/2-1 && len(le) == 0 && len(re) == 0 {
+				fmt.Printf("Jumping to Middle from %+v to %+v \n", rI, rowWidth/2-1)
+				rI = rowWidth/2 - 1
+				continue
+			}
+
+			if len(le) > 0 && len(re) > 0 {
+				fmt.Printf("Found Middle after %+v, %+v, %+v \n", rI, le, re)
+				if len(rbh) > 0 &&
+					len(rbq) > 0 &&
+					len(lbh) > 0 &&
+					len(lbq) > 0 {
+
+					fmt.Printf("Lower half done after %+v rows \n", rI)
+					fmt.Printf("%+v,%+v, %+v, %+v \n", rbh, rbq, lbh, lbq)
+					fmt.Printf("%+v,%+v, %+v \n", rI, rowWidth, rowWidth-1)
+
+					if rI < rowWidth-2 && len(be) == 0 && len(be) == 0 {
+						rI = rowWidth - 2
+						fmt.Printf("Jumping to End from %+v to %+v(%+v) \n", rI, rowWidth-2, rowWidth)
+						continue
+					}
+				}
+			}
+		}
+
+		for cI := 0; cI < colWidth; cI++ {
+			tileStyle := getTileStyle([]int{rI, cI}, newStart, stepsLeft, len(m))
+			if tileStyle[0] == 0 && tileStyle[1] == 0 && tileStyle[2] == 0 && tileStyle[3] == 0 {
+				continue
+			}
+
+			if tileStyle[0] == 1 && tileStyle[1] == 1 && tileStyle[2] == 1 && tileStyle[3] == 1 {
+				// Full Tile
+				if rI%2 == 0 {
+					if cI%2 == 0 {
+
+						if len(oddTile) == 0 {
+							oddTile = []int{rI, cI}
+						}
+					} else {
+						if len(evenTile) == 0 {
+							evenTile = []int{rI, cI}
+						}
+					}
+				} else {
+					if cI%2 == 0 {
+						if len(evenTile) == 0 {
+							evenTile = []int{rI, cI}
+						}
+					} else {
+						if len(oddTile) == 0 {
+							oddTile = []int{rI, cI}
+						}
+					}
+				}
+				continue
+			} else if tileStyle[0] == 1 && tileStyle[1] == 1 && tileStyle[2] == 1 && tileStyle[3] == 0 {
+				// Left bottom halfs
+				if len(lbh) == 0 {
+					lbh = []int{rI, cI}
+				}
+			} else if tileStyle[0] == 1 && tileStyle[1] == 0 && tileStyle[2] == 1 && tileStyle[3] == 1 {
+				// Top right halfs
+				if len(rth) == 0 {
+					rth = []int{rI, cI}
+				}
+			} else if tileStyle[0] == 0 && tileStyle[1] == 1 && tileStyle[2] == 1 && tileStyle[3] == 1 {
+				// Left Top halfs
+				if len(lth) == 0 {
+					lth = []int{rI, cI}
+				}
+			} else if tileStyle[0] == 1 && tileStyle[1] == 1 && tileStyle[2] == 0 && tileStyle[3] == 1 {
+				// right bottom halfs
+				if len(rbh) == 0 {
+					rbh = []int{rI, cI}
+				}
+			} else if tileStyle[0] == 0 && tileStyle[1] == 1 && tileStyle[2] == 1 && tileStyle[3] == 0 {
+				// left end
+				if len(le) == 0 {
+					le = []int{rI, cI}
+				}
+			} else if tileStyle[0] == 1 && tileStyle[1] == 0 && tileStyle[2] == 0 && tileStyle[3] == 1 {
+				// right end
+				if len(re) == 0 {
+					re = []int{rI, cI}
+				}
+			} else if tileStyle[0] == 0 && tileStyle[1] == 0 && tileStyle[2] == 1 && tileStyle[3] == 1 {
+				// top end
+				if len(te) == 0 {
+					te = []int{rI, cI}
+				}
+			} else if tileStyle[0] == 1 && tileStyle[1] == 1 && tileStyle[2] == 0 && tileStyle[3] == 0 {
+				// bottom end
+				if len(be) == 0 {
+					be = []int{rI, cI}
+					if len(be) > 0 {
+						fmt.Printf("Found End after %+v, %+v \n", rI, be)
+						break
+					}
+				}
+			} else {
+				if tileStyle[0] == 1 && tileStyle[1] == 0 && tileStyle[2] == 0 && tileStyle[3] == 0 {
+					// only top left -> right bottom querter
+					if len(rbq) == 0 {
+						rbq = []int{rI, cI}
+					}
+				} else if tileStyle[0] == 0 && tileStyle[1] == 1 && tileStyle[2] == 0 && tileStyle[3] == 0 {
+					// only top right -> left bottom querter
+					if len(lbq) == 0 {
+						lbq = []int{rI, cI}
+					}
+				} else if tileStyle[0] == 0 && tileStyle[1] == 0 && tileStyle[2] == 1 && tileStyle[3] == 0 {
+					// only bottom right -> left top querter
+					if len(ltq) == 0 {
+						ltq = []int{rI, cI}
+					}
+				} else if tileStyle[0] == 0 && tileStyle[1] == 0 && tileStyle[2] == 0 && tileStyle[3] == 1 {
+					// only bottom left -> right top querter
+					if len(rtq) == 0 {
+						rtq = []int{rI, cI}
+					}
+				}
+			}
+		}
+	}
+
+	fmt.Print("\n")
+	fmt.Print("\nCalculated Dimension: ", rowWidth, "*", colWidth, " For Map: ", len(m), "*", len(m[0]), " New Start at: ", newStart, " in Colum: ", startingColumn, " Given Steps: ", stepsLeft, "\n")
+
+	tileMap := map[string][]int{
+		"evenTile": evenTile,
+		"oddTile":  oddTile,
+		"rth":      rth,
+		"rtq":      rtq,
+		"rbh":      rbh,
+		"rbq":      rbq,
+		"lth":      lth,
+		"ltq":      ltq,
+		"lbh":      lbh,
+		"lbq":      lbq,
+		"le":       le,
+		"re":       re,
+		"te":       te,
+		"be":       be,
+	}
+
+	amtOfHalfs := ((rowWidth - 3) / 2)
+	amtOfQuarters := amtOfHalfs + 1
+
+	tileResults := map[string]int{}
+
+	for itemKey, item := range tileMap {
+		fmt.Print("\n")
+		fmt.Print("\n-------------------------------------------------------\n")
+		fmt.Print("\nAnalyzing ", item, " Key:", itemKey)
+		hits := 0
+
+		for rI := 0; rI < len(m); rI++ {
+			arI := (item[0] * len(m)) + rI
+
+			fmt.Print("\n")
+			if rI%len(m) == 0 {
+				fmt.Print("\n")
+			}
+
+			for cI := 0; cI < len(m[0]); cI++ {
+				acI := (item[1] * len(m)) + cI
+				normKey := Normalize(rI, cI, len(m), len(m[0]))
+				char := string(m[normKey[0]][normKey[1]])
+
+				if char == "#" {
+					fmt.Print(white("#"))
+					continue
+				}
+
+				if rI == len(m)/2 {
+					fmt.Print("-")
+					continue
+				}
+
+				if cI == len(m)/2 {
+					fmt.Print("|")
+					continue
+				}
+
+				if itemKey == "oddTile" {
+					if acI <= newStart[1] && arI <= newStart[0] {
+						if int(math.Abs(float64(newStart[0]-arI)))+int(math.Abs(float64(newStart[1]-acI))) <= stepsLeft+1 {
+
+							if rI%2 == 0 {
+								if cI%2 != 0 {
+									fmt.Print(primary("0"))
+									hits++ // add neighbours
+								} else {
+									fmt.Print(secondary(char))
+								}
+							} else {
+								if cI%2 != 0 {
+									fmt.Print(secondary(char))
+								} else {
+									fmt.Print(primary("0"))
+									hits++ // add neighbours
+								}
+							}
+						} else {
+							fmt.Print(white(char))
+						}
+					} else if acI < newStart[1] && arI > newStart[0] {
+						if int(math.Abs(float64(arI-newStart[0])))+int(math.Abs(float64(newStart[1]-acI))) <= stepsLeft+1 {
+							if rI%2 == 0 {
+								if cI%2 != 0 {
+									fmt.Print(primary("0"))
+									hits++ // add neighbours
+								} else {
+									fmt.Print(secondary(char))
+								}
+							} else {
+								if cI%2 != 0 {
+									fmt.Print(secondary(char))
+								} else {
+									fmt.Print(primary("0"))
+									hits++ // add neighbours
+								}
+							}
+						} else {
+							fmt.Print(white(char))
+						}
+					} else if acI > newStart[1] && arI < newStart[0] {
+						if int(math.Abs(float64(newStart[0]-arI)))+int(math.Abs(float64(acI-newStart[1]))) <= stepsLeft+1 {
+							if rI%2 == 0 {
+								if cI%2 != 0 {
+									fmt.Print(primary("0"))
+									hits++ // add neighbours
+								} else {
+									fmt.Print(secondary(char))
+								}
+							} else {
+								if cI%2 != 0 {
+									fmt.Print(secondary(char))
+								} else {
+									fmt.Print(primary("0"))
+									hits++ // add neighbours
+								}
+							}
+						} else {
+							fmt.Print(white(char))
+						}
+					} else if acI > newStart[1] && arI > newStart[0] {
+						if int(math.Abs(float64(arI-newStart[0])))+int(math.Abs(float64(acI-newStart[1]))) <= stepsLeft+1 {
+							if rI%2 == 0 {
+								if cI%2 != 0 {
+									fmt.Print(primary("0"))
+									hits++ // add neighbours
+								} else {
+									fmt.Print(secondary(char))
+								}
+							} else {
+								if cI%2 != 0 {
+									fmt.Print(secondary(char))
+								} else {
+									fmt.Print(primary("0"))
+									hits++ // add neighbours
+								}
+							}
+						} else {
+							fmt.Print(white(char))
+						}
+					} else {
+						if int(math.Abs(float64(newStart[0]-arI)))+int(math.Abs(float64(newStart[1]-acI))) <= stepsLeft+1 {
+							if rI%2 == 0 {
+								if cI%2 != 0 {
+									fmt.Print(primary("0"))
+									hits++ // add neighbours
+								} else {
+									fmt.Print(secondary(char))
+								}
+							} else {
+								if cI%2 != 0 {
+									fmt.Print(secondary(char))
+								} else {
+									fmt.Print(primary("0"))
+									hits++ // add neighbours
+								}
+							}
+						} else {
+							fmt.Print(white(char))
+						}
+					}
+				} else {
+					if acI <= newStart[1] && arI <= newStart[0] {
+						if int(math.Abs(float64(newStart[0]-arI)))+int(math.Abs(float64(newStart[1]-acI))) <= stepsLeft+1 {
+
+							if rI%2 == 0 {
+								if cI%2 == 0 {
+									fmt.Print(primary("0"))
+									hits++ // add neighbours
+								} else {
+									fmt.Print(secondary(char))
+								}
+							} else {
+								if cI%2 == 0 {
+									fmt.Print(secondary(char))
+								} else {
+									fmt.Print(primary("0"))
+									hits++ // add neighbours
+								}
+							}
+						} else {
+							fmt.Print(white(char))
+						}
+					} else if acI < newStart[1] && arI > newStart[0] {
+						if int(math.Abs(float64(arI-newStart[0])))+int(math.Abs(float64(newStart[1]-acI))) <= stepsLeft+1 {
+							if rI%2 == 0 {
+								if cI%2 == 0 {
+									fmt.Print(primary("0"))
+									hits++ // add neighbours
+								} else {
+									fmt.Print(secondary(char))
+								}
+							} else {
+								if cI%2 == 0 {
+									fmt.Print(secondary(char))
+								} else {
+									fmt.Print(primary("0"))
+									hits++ // add neighbours
+								}
+							}
+						} else {
+							fmt.Print(white(char))
+						}
+					} else if acI > newStart[1] && arI < newStart[0] {
+						if int(math.Abs(float64(newStart[0]-arI)))+int(math.Abs(float64(acI-newStart[1]))) <= stepsLeft+1 {
+							if rI%2 == 0 {
+								if cI%2 == 0 {
+									fmt.Print(primary("0"))
+									hits++ // add neighbours
+								} else {
+									fmt.Print(secondary(char))
+								}
+							} else {
+								if cI%2 == 0 {
+									fmt.Print(secondary(char))
+								} else {
+									fmt.Print(primary("0"))
+									hits++ // add neighbours
+								}
+							}
+						} else {
+							fmt.Print(white(char))
+						}
+					} else if acI > newStart[1] && arI > newStart[0] {
+						if int(math.Abs(float64(arI-newStart[0])))+int(math.Abs(float64(acI-newStart[1]))) <= stepsLeft+1 {
+							if rI%2 == 0 {
+								if cI%2 == 0 {
+									fmt.Print(primary("0"))
+									hits++ // add neighbours
+								} else {
+									fmt.Print(secondary(char))
+								}
+							} else {
+								if cI%2 == 0 {
+									fmt.Print(secondary(char))
+								} else {
+									fmt.Print(primary("0"))
+									hits++ // add neighbours
+								}
+							}
+						} else {
+							fmt.Print(white(char))
+						}
+					} else {
+						if int(math.Abs(float64(newStart[0]-arI)))+int(math.Abs(float64(newStart[1]-acI))) <= stepsLeft+1 {
+							if rI%2 == 0 {
+								if cI%2 == 0 {
+									fmt.Print(primary("0"))
+									hits++ // add neighbours
+								} else {
+									fmt.Print(secondary(char))
+								}
+							} else {
+								if cI%2 == 0 {
+									fmt.Print(secondary(char))
+								} else {
+									fmt.Print(primary("0"))
+									hits++ // add neighbours
+								}
+							}
+						} else {
+							fmt.Print(white(char))
+						}
+					}
+				}
+
+			}
+		}
+
+		tileResults[itemKey] = hits
+		fmt.Print("\n\nDone With ", item, " hits:", hits, "\n")
+		fmt.Print("-------------------------------------------------------\n")
+	}
+
+	assertOdd := int(math.Pow(float64(((rowWidth/2-1)/2*2 + 1)), 2))
+	assertEven := int(math.Pow(float64((((rowWidth/2 - 1) + 1) / 2 * 2)), 2))
+
+	sum := 0
+
+	for resultKey, result := range tileResults {
+		if resultKey == "evenTile" {
+			sum += assertEven * result
+		} else if resultKey == "oddTile" {
+			sum += assertOdd * result
+		} else if resultKey == "rth" || resultKey == "rbh" || resultKey == "lth" || resultKey == "lbh" {
+			sum += amtOfHalfs * result
+		} else if resultKey == "rtq" || resultKey == "rbq" || resultKey == "ltq" || resultKey == "lbq" {
+			sum += amtOfQuarters * result
+		} else {
+			sum += result
+		}
+	}
+
+	fmt.Print(
+		"insideTiles: ", assertOdd+assertEven, " | ",
+		"evenTiles: ", assertEven, " | ",
+		"oddTiles: ", assertOdd, " | ",
+		"amtOfHalfs: ", amtOfHalfs, " | ",
+		"amtOfQuarters: ", amtOfQuarters, " | ",
+	)
+
+	fmt.Printf("Results: %+v ----- SUM: %+v ---------- \n", tileResults, sum)
+	fmt.Printf("\nTest: %+v, %+v---------------\n", rowWidth/2-1, stepsLeft/len(m)-1)
+	fmt.Printf("\nTest Odds: %+v---------------\n", assertOdd)
+	fmt.Printf("\nTest Evens: %+v---------------\n", assertEven)
+	return sum
+}
+
+// a beautiful mess #2
+func getTileStyle(dest, start []int, steps, l int) []int {
+	tileStyle := []int{0, 0, 0, 0}
+
+	topLeft := []int{dest[0] * l, dest[1] * l}
+	topRight := []int{dest[0] * l, (dest[1] * l) + l}
+	bottomRight := []int{(dest[0] * l) + l, (dest[1] * l) + l}
+	bottomLeft := []int{(dest[0] * l) + l, (dest[1] * l)}
+
+	if dest[0]*l < start[0] && dest[1]*l < start[1] {
+		if int(math.Abs(float64(start[0]-topLeft[0])))+int(math.Abs(float64(start[1]-topLeft[1]))) <= steps {
+			tileStyle[0] = 1
+		}
+
+		if int(math.Abs(float64(start[0]-topRight[0])))+int(math.Abs(float64(start[1]-topRight[1]))) <= steps {
+			tileStyle[1] = 1
+		}
+
+		if int(math.Abs(float64(start[0]-bottomRight[0])))+int(math.Abs(float64(start[1]-bottomRight[1]))) <= steps {
+			tileStyle[2] = 1
+		}
+
+		if int(math.Abs(float64(start[0]-bottomLeft[0])))+int(math.Abs(float64(start[1]-bottomLeft[1]))) <= steps {
+			tileStyle[3] = 1
+		}
+	} else if dest[0]*l > start[0] && dest[1]*l > start[1] {
+		if int(math.Abs(float64(topLeft[0]-start[0])))+int(math.Abs(float64(topLeft[1]-start[1]))) <= steps {
+			tileStyle[0] = 1
+		}
+
+		if int(math.Abs(float64(topRight[0]-start[0])))+int(math.Abs(float64(topRight[1]-start[1]))) <= steps {
+			tileStyle[1] = 1
+		}
+
+		if int(math.Abs(float64(bottomRight[0]-start[0])))+int(math.Abs(float64(bottomRight[1]-start[1]))) <= steps {
+			tileStyle[2] = 1
+		}
+
+		if int(math.Abs(float64(bottomLeft[0]-start[0])))+int(math.Abs(float64(bottomLeft[1]-start[1]))) <= steps {
+			tileStyle[3] = 1
+		}
+	} else if dest[0]*l > start[0] && dest[1]*l < start[1] {
+		if int(math.Abs(float64(topLeft[0]-start[0])))+int(math.Abs(float64(start[1]-topLeft[1]))) <= steps {
+			tileStyle[0] = 1
+		}
+
+		if int(math.Abs(float64(topRight[0]-start[0])))+int(math.Abs(float64(start[1]-topRight[1]))) <= steps {
+			tileStyle[1] = 1
+		}
+
+		if int(math.Abs(float64(bottomRight[0]-start[0])))+int(math.Abs(float64(start[1]-bottomRight[1]))) <= steps {
+			tileStyle[2] = 1
+		}
+
+		if int(math.Abs(float64(bottomLeft[0]-start[0])))+int(math.Abs(float64(start[1]-bottomLeft[1]))) <= steps {
+			tileStyle[3] = 1
+		}
+	} else if dest[0]*l < start[0] && dest[1]*l > start[1] {
+		if int(math.Abs(float64(start[0]-topLeft[0])))+int(math.Abs(float64(topLeft[1]-start[1]))) <= steps {
+			tileStyle[0] = 1
+		}
+
+		if int(math.Abs(float64(start[0]-topRight[0])))+int(math.Abs(float64(topRight[1]-start[1]))) <= steps {
+			tileStyle[1] = 1
+		}
+
+		if int(math.Abs(float64(start[0]-bottomRight[0])))+int(math.Abs(float64(bottomRight[1]-start[1]))) <= steps {
+			tileStyle[2] = 1
+		}
+
+		if int(math.Abs(float64(start[0]-bottomLeft[0])))+int(math.Abs(float64(bottomLeft[1]-start[1]))) <= steps {
+			tileStyle[3] = 1
+		}
+	}
+
+	return tileStyle
+}
+
+// this normalizes x and y to pass array boundaries by
+// offsetting x and y back to their original values, kind of like background repetition
+func Normalize(x, y, xLen, yLen int) []int {
+	rx, ry := x, y
+
+	if x >= xLen {
+		rx = x % xLen
+	}
+
+	if x < 0 {
+		if int(math.Abs(float64(x))) >= xLen {
+			if (x % xLen) == 0 {
+				rx = 0
+			} else {
+				rx = xLen + (x % xLen)
+			}
+		} else {
+			rx = xLen + x
+		}
+	}
+
+	if y >= yLen {
+		ry = y % yLen
+	}
+
+	if y < 0 {
+		if int(math.Abs(float64(y))) >= yLen {
+			if (y % yLen) == 0 {
+				ry = 0
+			} else {
+				ry = yLen + (y % yLen)
+			}
+		} else {
+			ry = yLen + y
+		}
+	}
+
+	return []int{rx, ry}
+}
