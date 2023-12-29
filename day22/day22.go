@@ -14,12 +14,12 @@ type Position struct {
 	z int
 }
 type Brick struct {
-	name             int
-	isGrounded       bool
-	supports         int
-	supportingBricks []Brick
-	start            Position
-	end              Position
+	name              int
+	isGrounded        bool
+	supportingBricks  []Brick
+	bricksSupportedBy []Brick
+	start             Position
+	end               Position
 }
 
 var primary = color.New(color.FgRed).SprintFunc()
@@ -28,8 +28,8 @@ var high = color.New(color.FgCyan).SprintFunc()
 var empty = color.New(color.FgBlue).SprintFunc()
 var ground = color.New(color.FgGreen).SprintFunc()
 
-func CollectBricks(input []string) int {
-	bricks := map[string]Brick{}
+func CollectBricks(input []string) (int, int) {
+	initialBricks := map[string]Brick{}
 
 	maxX, maxY, maxZ := 0, 0, 0
 
@@ -48,7 +48,7 @@ func CollectBricks(input []string) int {
 			endAsInt = append(endAsInt, n)
 		}
 
-		bricks[fmt.Sprintf("%+v", rowIndex)] = Brick{
+		initialBricks[fmt.Sprintf("%+v", rowIndex)] = Brick{
 			name: rowIndex,
 			start: Position{
 				x: startAsInt[0],
@@ -76,42 +76,67 @@ func CollectBricks(input []string) int {
 		}
 	}
 
-	fmt.Print("BEFORE-----------------\n")
-	printMap(bricks, maxX, maxY, maxZ, "zx", 0)
+	fmt.Print("BEFORE\n")
+	printMap(initialBricks, maxX, maxY, maxZ, "zx", 0)
 
-	bricks = Fall(bricks, maxX, maxY, maxZ)
-	sum := 0
+	bricks, _ := Fall(initialBricks, maxX, maxY, maxZ)
 
-	fmt.Print("After-----------------\n")
-	printMap(bricks, maxX, maxY, maxZ, "zx", 0)
+	sumOfRemovableBricks := 0
+	sumOfFallingBricks := 0
 
-	for _, brick := range bricks {
+	for brickId, brick := range bricks {
+		// count amounts of bricks supported by this brick
 		supports := 0
+		// unsure if needed, cache length and count should be same
+		fallingBricks := 0
 
-		// check for the amount of supports for each supporting brick of the current brick
-		// a brick can be supported by only one other brick, so in case one supporting
-		// brick has more than one support we can safely assume that we can remove the current one
+		// Part 1
+		// check the amount of supports for each supporting brick of the current brick
+		// a brick can be supported by only one brick, so every supported brick that has more than one supporter
+		// can be skipped
 		for _, supported := range brick.supportingBricks {
-			if supported.supports <= 1 {
+			if len(supported.bricksSupportedBy) == 1 {
 				supports++
 			}
 		}
-
 		if supports == 0 {
-			sum++
+			sumOfRemovableBricks++
 		}
+
+		bricksWithoutMe := map[string]Brick{}
+		for k, b := range bricks {
+			if k != brickId {
+				bricksWithoutMe[k] = b
+			}
+		}
+
+		// lazy & sloow solution, just remove the brick and simulate falling
+		_, movedBricks := Fall(bricksWithoutMe, maxX, maxY, maxZ)
+		fallingBricks += len(movedBricks)
+
+		fmt.Printf("When %+v is removed, %+v other Bricks will fall\n", brick.name, fallingBricks)
+		sumOfFallingBricks += fallingBricks
 	}
 
-	return sum
+	fmt.Printf("\n%+v Bricks can be savely removed, %+v bricks have moved \n", sumOfRemovableBricks, sumOfFallingBricks)
+	printMap(bricks, maxX, maxY, maxZ, "zx", 0)
+	printMap(bricks, maxX, maxY, maxZ, "zy", 0)
+
+	return sumOfRemovableBricks, sumOfFallingBricks
 }
 
-func Fall(bricks map[string]Brick, maxX, maxY, maxZ int) map[string]Brick {
+// Alternative solution ideas
+// just make it faster by using goroutines
+// instead of using Fall create a method that memorizes how many bricks fall due to a single one
+// and allow looking up
+
+func Fall(bricks map[string]Brick, maxX, maxY, maxZ int) (map[string]Brick, map[string]int) {
 	// define amount of moves/cycles to begin with
 	// each cycle moves all movable bricks one z level down until
 	// it cannot move any further. In case a brick has moved
 	// increase the amount of moves/cycles to determine the final state
-	// of ig other bricks can move now
 	moves := 1
+	movedBricks := map[string]int{}
 
 	for i := 0; i < moves; i++ {
 		// instead of adding a cycle with each brick move
@@ -119,123 +144,119 @@ func Fall(bricks map[string]Brick, maxX, maxY, maxZ int) map[string]Brick {
 		movesThisTick := 0
 
 		for brickId, brick := range bricks {
-
 			// for each brick determine if it can move, is supporting any other bricks
 			// or is grounded
 			canMove := true
 			isGrounded := brick.isGrounded
-			// we save the amount of supporters for this brick to
-			// be able to determine if we can safely remove one when a brick has more than one
-			// supporter
-			brickSupports := 0
+			jump := 1
+
 			// we save the bricks we support to later estimate if we can safely remove a brick
 			// depending the condition explained above
 			supportingBricks := []Brick{}
+			// we also save the bricks we are supported by for later checks
+			bricksSupportedBy := []Brick{}
 
 			// in case z is 1 we know that the brick is on ground level
 			if brick.start.z == 1 || brick.end.z == 1 {
 				isGrounded = true
+				jump = 0
 			}
 
 			// compare each brick with the other bricks
 			for _, otherBrick := range bricks {
 				// continue in case we compare to ourselves
-				if otherBrick.name == brick.name {
+				if otherBrick.name == brick.name || (otherBrick.start.z > brick.start.z+1 && otherBrick.end.z > brick.end.z+1) {
 					continue
 				}
-				// compare with bricks on top of the current brick
-				if otherBrick.start.z == brick.start.z+1 || otherBrick.end.z == brick.end.z+1 {
-					// if they collide we can assume the current brick is a support brick
-					// and add the colliding brick to the current bricks supporting list
-					if rangesDoCollide(
-						[]int{brick.start.x, brick.start.y},
-						[]int{brick.end.x, brick.end.y},
-						[]int{otherBrick.start.x, otherBrick.start.y},
-						[]int{otherBrick.end.x, otherBrick.end.y},
-					) {
-						// fmt.Printf("Supporting other Brick \n")
-						// fmt.Printf("Source %+v\n", brick)
-						// fmt.Printf("Target %+v\n", otherBrick)
-						// fmt.Printf("\n")
-						supportingBricks = append(supportingBricks, otherBrick)
-					}
-				}
 
-				// compare with bricks below the current brick
-				if otherBrick.start.z == brick.start.z-1 || otherBrick.end.z == brick.end.z-1 {
-					// if they collide we can assume the current brick can not move further down
-					// we can also memoize that the current brick has supports for later
-					// comparisons
-					if rangesDoCollide(
-						[]int{brick.start.x, brick.start.y},
-						[]int{brick.end.x, brick.end.y},
-						[]int{otherBrick.start.x, otherBrick.start.y},
-						[]int{otherBrick.end.x, otherBrick.end.y},
-					) {
-						// fmt.Printf("Brick Cannot move because of Collision \n")
-						// fmt.Printf("Source %+v\n", brick)
-						// fmt.Printf("Target %+v\n", otherBrick)
-						// fmt.Printf("\n")
-						brickSupports++
+				if rangesDoCollide(
+					[]int{brick.start.x, brick.start.y},
+					[]int{brick.end.x, brick.end.y},
+					[]int{otherBrick.start.x, otherBrick.start.y},
+					[]int{otherBrick.end.x, otherBrick.end.y},
+				) {
+					// compare with bricks on top of the current brick
+					// if bricks collide we can assume the current brick is a support brick
+					// and add the colliding brick to the current bricks supporting list
+					if otherBrick.start.z == brick.start.z+1 || otherBrick.end.z == brick.end.z+1 {
+						supportingBricks = append(supportingBricks, otherBrick)
+					} else if otherBrick.start.z == brick.start.z-1 || otherBrick.end.z == brick.end.z-1 {
+						// compare with bricks below the current brick
+						// if they collide we can assume the current brick can not move further down
+						// we can also memoize that the current brick has supports for later
+						// comparisons
+						bricksSupportedBy = append(bricksSupportedBy, otherBrick)
+						jump = 0
 						canMove = false
 					}
+
+					// find distance to next colliding brick below and jump
+					// won't work :/
+					// if otherBrick.start.z < brick.start.z {
+					// 	// find collider with highest z-index and take its z-index+1
+					// 	condition := (brick.start.z - (otherBrick.start.z + 1))
+					// 	if jump > condition {
+					// 		if condition == 0 {
+					// 			jump = 1
+					// 		} else {
+					// 			jump = condition
+					// 		}
+					// 	}
+					// }
 				}
 			}
 
 			// in case the brick can move and is not on ground level
 			// we decrease the z index of both start and end
 			// and add another cycle
-			if canMove && !isGrounded {
-				// fmt.Printf("This Brick can move downwards this tick! %+v \n", brick)
+			if canMove && !isGrounded && jump > 0 {
+				// fmt.Printf("Brick %+v will move %+v this tick! \n", brick.name, jump)
 				bricks[brickId] = Brick{
-					name:             brick.name,
-					isGrounded:       isGrounded,
-					supports:         brickSupports,
-					supportingBricks: supportingBricks,
+					name:              brick.name,
+					isGrounded:        isGrounded,
+					supportingBricks:  supportingBricks,
+					bricksSupportedBy: bricksSupportedBy,
 					start: Position{
 						x: brick.start.x,
 						y: brick.start.y,
-						z: brick.start.z - 1,
+						z: brick.start.z - jump,
 					},
 					end: Position{
 						x: brick.end.x,
 						y: brick.end.y,
-						z: brick.end.z - 1,
+						z: brick.end.z - jump,
 					},
 				}
 
+				movedBricks[brickId]++
 				movesThisTick++
 			} else {
 				// if we cannot move we just update the state of our current brick without moving
 				bricks[brickId] = Brick{
-					name:             brick.name,
-					isGrounded:       isGrounded,
-					start:            brick.start,
-					end:              brick.end,
-					supports:         brickSupports,
-					supportingBricks: supportingBricks,
+					name:              brick.name,
+					isGrounded:        isGrounded,
+					start:             brick.start,
+					end:               brick.end,
+					supportingBricks:  supportingBricks,
+					bricksSupportedBy: bricksSupportedBy,
 				}
 			}
 		}
 
+		// wonky as hell
 		if movesThisTick > 0 {
 			moves += 2 // add another final move to ensure supports are set properly
 		}
-
-		// fmt.Printf("AFTER Move %+v-----------------\n", i)
-		// printMap(bricks, maxX, maxY, maxZ, "zx", 0)
-		// printMap(bricks, maxX, maxY, maxZ, "zy", 0)
-		// printMap(bricks, maxX, maxY, maxZ, "xy", 2)
 	}
 
-	return bricks
+	return bricks, movedBricks
 }
 
 func rangesDoCollide(ss []int, se []int, ds []int, de []int) bool {
 	return ss[0] <= de[0] && se[0] >= ds[0] && ss[1] <= de[1] && se[1] >= ds[1]
 }
 
-// fancy printing is fancy
+// fancy printing is fancy spaghetti
 func printMap(bricks map[string]Brick, x, y, z int, view string, currentZ int) {
 	fmt.Printf("--------------- \n")
 	fmt.Printf("Drawing: %+v,%+v,%+v,%+v at level: %+v \n", x, y, z, view, currentZ)
@@ -308,11 +329,11 @@ func printMap(bricks map[string]Brick, x, y, z int, view string, currentZ int) {
 
 				if i == z+1 {
 					if j != x+1 {
-						fmt.Printf("  %+v ", j)
+						fmt.Printf("| %04v |", j)
 					}
 					continue
 				} else if j == x+1 {
-					fmt.Printf("  %+v ", i)
+					fmt.Printf("   %+v  ", i)
 					continue
 				}
 
@@ -349,10 +370,6 @@ func printMap(bricks map[string]Brick, x, y, z int, view string, currentZ int) {
 			if i == 0 {
 				fmt.Print("\n")
 			}
-
-			if i == z+1 {
-				fmt.Print("\n")
-			}
 		}
 	}
 	if view == "zy" {
@@ -365,11 +382,11 @@ func printMap(bricks map[string]Brick, x, y, z int, view string, currentZ int) {
 
 				if i == z+1 {
 					if j != y+1 {
-						fmt.Printf("   %+v   ", j)
+						fmt.Printf("| %04v |", j)
 					}
 					continue
 				} else if j == y+1 {
-					fmt.Printf("  %+v  ", i)
+					fmt.Printf("   %+v  ", i)
 					continue
 				}
 
@@ -386,18 +403,18 @@ func printMap(bricks map[string]Brick, x, y, z int, view string, currentZ int) {
 
 				if foundBrick <= 0 {
 					if i == 0 {
-						fmt.Print(ground("[-----]"))
+						fmt.Print(ground("[------]"))
 					} else {
-						fmt.Print(empty("......."))
+						fmt.Print(empty("........"))
 					}
 				} else {
 					if foundBrick > 1 {
-						fmt.Print(secondary("[  ?  ]"))
+						fmt.Print(secondary("[   ?  ]"))
 					} else {
 						if foundBrickZ != currentZ {
-							fmt.Print(primary(fmt.Sprintf("[%03v|%v]", lastFoundName, foundBrickZ)))
+							fmt.Print(primary(fmt.Sprintf("[%04v|%v]", lastFoundName, foundBrickZ)))
 						} else {
-							fmt.Print(high(fmt.Sprintf("[%03v|%v]", lastFoundName, currentZ)))
+							fmt.Print(high(fmt.Sprintf("[%04v|%v]", lastFoundName, currentZ)))
 						}
 					}
 				}
@@ -407,9 +424,6 @@ func printMap(bricks map[string]Brick, x, y, z int, view string, currentZ int) {
 				fmt.Print("\n")
 			}
 
-			if i == z+1 {
-				fmt.Print("\n")
-			}
 		}
 	}
 

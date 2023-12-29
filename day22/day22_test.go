@@ -19,23 +19,45 @@ var testInput = []string{
 	"1,1,8~1,1,9",
 }
 
-func TestCollectBricks(t *testing.T) {
+func TestEzCollectBricks(t *testing.T) {
 	expected := 5
-	actual := CollectBricks(testInput)
+	actual, _ := CollectBricks(testInput)
 
 	if expected != actual {
 		t.Errorf("Expected %+v , got %+v", expected, actual)
 	}
 }
 
-func TestMain(t *testing.T) {
+func TestMainCollect(t *testing.T) {
 	godotenv.Load()
 	expected, _ := strconv.Atoi(os.Getenv("result_1"))
 
 	Input, _ := utils.ReadInputFile("input.txt")
-	actual := CollectBricks(Input)
+	actual, _ := CollectBricks(Input)
 
 	if actual != expected {
+		t.Errorf("Expected %+v, got %+v", expected, actual)
+	}
+}
+
+func TestEzFalling(t *testing.T) {
+	expected := 7
+	_, actual := CollectBricks(testInput)
+
+	if expected != actual {
+		t.Errorf("Expected %+v , got %+v", expected, actual)
+	}
+}
+
+
+func TestMainFalling(t *testing.T) {
+	godotenv.Load()
+	expected, _ := strconv.Atoi(os.Getenv("result_2"))
+
+	Input, _ := utils.ReadInputFile("input.txt")
+	_, actual := CollectBricks(Input)
+
+	if actual != expected{
 		t.Errorf("Expected %+v, got %+v", expected, actual)
 	}
 }
