@@ -105,74 +105,24 @@ func ReadInput(input []string, min float64, max float64) int {
 	}
 
 	collisions := 0
-	collisionsB := 0
-	collisionMap := map[string]Point{}
+	for _, stone := range initialStones {
 
-	fmt.Print("\nStarting Analysis of Stone collisions --------\n")
-	fmt.Print("\nConfig: ", minX, maxX, minY, maxY, minZ, maxZ, "\n")
-	for stoneKey, stone := range initialStones {
-
-		for otherStoneKey, otherStone := range initialStones {
+		for _, otherStone := range initialStones {
 			if otherStone.name == stone.name {
 				continue
 			}
 
 			eqCheck, point := doEquationsIntersect(stone.eq, otherStone.eq, minX, maxX, minY, maxY)
-
 			// ensure point is not smaller than the origin of a stone // exclude "past"
 			if eqCheck && ((point.x-stone.start.x)*stone.vel.x >= 0 && (point.y-stone.start.y)*stone.vel.y >= 0 &&
 				(point.x-otherStone.start.x)*otherStone.vel.x >= 0 && (point.y-otherStone.start.y)*otherStone.vel.y >= 0) {
 				fmt.Print("Line Equotation based check Check: ", eqCheck, point, "\n")
-				collisionsB++
-			}
-
-			if ok, point := doSegmentsIntersect(stone.start, stone.end, otherStone.start, otherStone.end, 0, minX, maxX, minY, maxY, minZ, maxZ); ok {
-				// if (point.x-stone.start.x)*stone.vel.x >= 0 && (point.y-stone.start.y)*stone.vel.y >= 0 &&
-				// 	(point.x-otherStone.start.x)*otherStone.vel.x >= 0 && (point.y-otherStone.start.y)*otherStone.vel.y >= 0 {
-					collisions++
-					fmt.Printf("Recorded collision between: %+v & %+v, now at: %+v collisions \n", stoneKey, otherStoneKey, collisions)
-					collisionMap[fmt.Sprintf("%+v|%+v", stoneKey, otherStoneKey)] = point
-					fmt.Printf("Intersection point: %+v \n", point)
-				// }
+				collisions++
 			}
 		}
 	}
 
-	// printMap(initialStones, minX, maxX, minY, maxY, minZ, maxZ, "xy", 1, collisionMap)
-
-	fmt.Printf("\nRecorded %+v|%+v\n", collisions/2, collisionsB/2)
-	return collisionsB / 2 // otherwise the same collision is counted twice
-}
-
-func crossProduct(p1, p2, p3 Point) float64 {
-	return (p2.x-p1.x)*(p3.y-p1.y) - (p2.y-p1.y)*(p3.x-p1.x)
-}
-
-// two points given per line / no segments
-// https://en.wikipedia.org/wiki/Line%E2%80%93line_intersection#Given_two_points_on_each_line
-func doSegmentsIntersect(p1, p2, p3, p4 Point, tol, minX, maxX, minY, maxY, minZ, maxZ float64) (bool, Point) {
-	intersects := crossProduct(p1, p3, p4)*crossProduct(p2, p3, p4) <= tol &&
-		crossProduct(p3, p1, p2)*crossProduct(p4, p1, p2) <= tol
-
-	if intersects {
-		denominator := (p1.x-p2.x)*(p3.y-p4.y) - (p1.y-p2.y)*(p3.x-p4.x)
-		if denominator == 0 {
-			return true, Point{x: 0, y: 0}
-		}
-
-		t := (((p1.x - p3.x) * (p3.y - p4.y)) - ((p1.y - p3.y) * (p3.x - p4.x))) / denominator
-		u := (((p1.x - p3.x) * (p1.y - p2.y)) - ((p1.y - p3.y) * (p1.x - p2.x))) / denominator
-
-		px, py := (p1.x + t*(p2.x-p1.x)), (p1.y + t*(p2.y-p1.y))
-
-		if t >= 0 && t <= 1 && u >= 0 && u <= 1 {
-			// if px >= minX && px <= maxX && py >= minY && py <= maxY {
-				return true, Point{x: px, y: py}
-			// }
-		}
-	}
-
-	return false, Point{}
+	return collisions / 2 // dividie by two since every collision is recorded twice
 }
 
 // this checks intersections based on line equation instead of segments, seems to be more accurate
@@ -193,6 +143,38 @@ func doEquationsIntersect(eq Eq, eq2 Eq, minX, maxX, minY, maxY float64) (bool, 
 	}
 
 	return false, Point{0, 0, 0}
+}
+
+func crossProduct(p1, p2, p3 Point) float64 {
+	return (p2.x-p1.x)*(p3.y-p1.y) - (p2.y-p1.y)*(p3.x-p1.x)
+}
+
+// two points given per line / no segments
+// still the most useful for painting purposes. Guess it's up to being not all too precise
+// https://en.wikipedia.org/wiki/Line%E2%80%93line_intersection#Given_two_points_on_each_line
+func doSegmentsIntersect(p1, p2, p3, p4 Point, tol, minX, maxX, minY, maxY, minZ, maxZ float64) (bool, Point) {
+	intersects := crossProduct(p1, p3, p4)*crossProduct(p2, p3, p4) <= tol &&
+		crossProduct(p3, p1, p2)*crossProduct(p4, p1, p2) <= tol
+
+	if intersects {
+		denominator := (p1.x-p2.x)*(p3.y-p4.y) - (p1.y-p2.y)*(p3.x-p4.x)
+		if denominator == 0 {
+			return true, Point{x: 0, y: 0}
+		}
+
+		t := (((p1.x - p3.x) * (p3.y - p4.y)) - ((p1.y - p3.y) * (p3.x - p4.x))) / denominator
+		u := (((p1.x - p3.x) * (p1.y - p2.y)) - ((p1.y - p3.y) * (p1.x - p2.x))) / denominator
+
+		px, py := (p1.x + t*(p2.x-p1.x)), (p1.y + t*(p2.y-p1.y))
+
+		if t >= 0 && t <= 1 && u >= 0 && u <= 1 {
+			// if px >= minX && px <= maxX && py >= minY && py <= maxY {
+			return true, Point{x: px, y: py}
+			// }
+		}
+	}
+
+	return false, Point{}
 }
 
 func printMap(stones map[string]Stone, minX, maxX, minY, maxY, minZ, maxZ float64, view string, currentZ float64, collisionMap map[string]Point) {
