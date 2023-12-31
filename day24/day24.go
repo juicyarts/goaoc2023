@@ -13,10 +13,15 @@ type Point struct {
 	x, y, z float64
 }
 
+type Eq struct {
+	a, b, c float64
+}
+
 type Stone struct {
 	start Point
 	end   Point
 	vel   Point
+	eq    Eq
 	name  int
 }
 
@@ -52,21 +57,27 @@ func ReadInput(input []string, min float64, max float64) int {
 		}
 
 		possibleSteps := float64(0)
-		if velAsInt[0] < 0 {
-			possibleSteps = (posAsInt[0] - minX) / velAsInt[0]
-			if velAsInt[1] < 0 {
-				possibleSteps = math.Min((posAsInt[0]-minX)/velAsInt[0], (posAsInt[1]-minY)/velAsInt[1])
-			} else if velAsInt[1] > 0 {
-				possibleSteps = math.Min((posAsInt[0]-minX)/velAsInt[0], (maxY-posAsInt[1])/velAsInt[1])
-			}
-		} else {
-			possibleSteps = (minX - posAsInt[0]) / velAsInt[0]
-			if velAsInt[1] < 0 {
-				possibleSteps = math.Min((maxX-posAsInt[0])/velAsInt[0], (posAsInt[1]-minY)/velAsInt[1])
-			} else if velAsInt[1] > 0 {
-				possibleSteps = math.Min((maxX-posAsInt[0])/velAsInt[0], (maxY-posAsInt[1])/velAsInt[1])
-			}
+		tx, ty, tz := float64(0), float64(0), float64(0)
+
+		if velAsInt[0] > 0 {
+			tx = (maxX - posAsInt[0]) / velAsInt[0]
+		} else if velAsInt[0] < 0 {
+			tx = (minX - posAsInt[0]) / velAsInt[0]
 		}
+
+		if velAsInt[1] > 0 {
+			ty = (maxY - posAsInt[1]) / velAsInt[1]
+		} else if velAsInt[1] < 0 {
+			ty = (minY - posAsInt[1]) / velAsInt[1]
+		}
+
+		if velAsInt[2] > 0 {
+			tz = (maxZ - posAsInt[2]) / velAsInt[2]
+		} else if velAsInt[2] < 0 {
+			tz = (minZ - posAsInt[2]) / velAsInt[2]
+		}
+
+		possibleSteps = math.Min(tx, math.Min(ty, tz))
 
 		initialStones[fmt.Sprintf("%+v", rowIndex)] = Stone{
 			name: rowIndex,
@@ -76,62 +87,61 @@ func ReadInput(input []string, min float64, max float64) int {
 				z: posAsInt[2],
 			},
 			end: Point{
-				x: posAsInt[0] - (possibleSteps * velAsInt[0]),
-				y: posAsInt[1] - (possibleSteps * velAsInt[1]),
-				z: posAsInt[2],
+				x: posAsInt[0] + (possibleSteps * velAsInt[0]),
+				y: posAsInt[1] + (possibleSteps * velAsInt[1]),
+				z: posAsInt[2] + (possibleSteps * velAsInt[2]),
 			},
 			vel: Point{
 				x: velAsInt[0],
 				y: velAsInt[1],
 				z: velAsInt[2],
 			},
+			eq: Eq{
+				a: velAsInt[1],
+				b: -velAsInt[0],
+				c: velAsInt[1]*posAsInt[0] - velAsInt[0]*posAsInt[1],
+			},
 		}
 	}
 
 	collisions := 0
+	collisionsB := 0
 	collisionMap := map[string]Point{}
 
 	fmt.Print("\nStarting Analysis of Stone collisions --------\n")
 	fmt.Print("\nConfig: ", minX, maxX, minY, maxY, minZ, maxZ, "\n")
 	for stoneKey, stone := range initialStones {
-		is := stone.start
-		ie := stone.end
-
-		if ie.x < stone.start.x && ie.y < stone.start.y {
-			is = stone.end
-			ie = stone.start
-		}
 
 		for otherStoneKey, otherStone := range initialStones {
 			if otherStone.name == stone.name {
 				continue
 			}
 
-			ioes := otherStone.start
-			ioee := otherStone.end
+			eqCheck, point := doEquationsIntersect(stone.eq, otherStone.eq, minX, maxX, minY, maxY)
 
-			if ioee.x < otherStone.start.x && ioee.y < otherStone.start.y {
-				ioes = otherStone.end
-				ioee = otherStone.start
+			// ensure point is not smaller than the origin of a stone // exclude "past"
+			if eqCheck && ((point.x-stone.start.x)*stone.vel.x >= 0 && (point.y-stone.start.y)*stone.vel.y >= 0 &&
+				(point.x-otherStone.start.x)*otherStone.vel.x >= 0 && (point.y-otherStone.start.y)*otherStone.vel.y >= 0) {
+				fmt.Print("Line Equotation based check Check: ", eqCheck, point, "\n")
+				collisionsB++
 			}
 
-			if ok, point := doIntersectInRange(is, ie, ioes, ioee, 0, minX, maxX, minY, maxY, minZ, maxZ); ok {
-				// if (point.x-is.x)*stone.vel.x >= 0 && (point.y-is.y)*stone.vel.y >= 0 &&
-				// 	(point.x-ioes.x)*otherStone.vel.x >= 0 && (point.y-ioes.y)*otherStone.vel.y >= 0 {
-				collisions++
-				fmt.Printf("Recorded collision between: %+v & %+v, now at: %+v collisions \n", stoneKey, otherStoneKey, collisions)
-				collisionMap[fmt.Sprintf("%+v|%+v", stoneKey, otherStoneKey)] = point
-				fmt.Printf("Intersection point: %+v \n", point)
+			if ok, point := doSegmentsIntersect(stone.start, stone.end, otherStone.start, otherStone.end, 0, minX, maxX, minY, maxY, minZ, maxZ); ok {
+				// if (point.x-stone.start.x)*stone.vel.x >= 0 && (point.y-stone.start.y)*stone.vel.y >= 0 &&
+				// 	(point.x-otherStone.start.x)*otherStone.vel.x >= 0 && (point.y-otherStone.start.y)*otherStone.vel.y >= 0 {
+					collisions++
+					fmt.Printf("Recorded collision between: %+v & %+v, now at: %+v collisions \n", stoneKey, otherStoneKey, collisions)
+					collisionMap[fmt.Sprintf("%+v|%+v", stoneKey, otherStoneKey)] = point
+					fmt.Printf("Intersection point: %+v \n", point)
 				// }
 			}
-
 		}
 	}
 
 	// printMap(initialStones, minX, maxX, minY, maxY, minZ, maxZ, "xy", 1, collisionMap)
 
-	fmt.Printf("\nRecorded %+v\n", collisions)
-	return len(collisionMap) / 2 // otherwise the same collision is counted twice
+	fmt.Printf("\nRecorded %+v|%+v\n", collisions/2, collisionsB/2)
+	return collisionsB / 2 // otherwise the same collision is counted twice
 }
 
 func crossProduct(p1, p2, p3 Point) float64 {
@@ -140,7 +150,7 @@ func crossProduct(p1, p2, p3 Point) float64 {
 
 // two points given per line / no segments
 // https://en.wikipedia.org/wiki/Line%E2%80%93line_intersection#Given_two_points_on_each_line
-func doIntersectInRange(p1, p2, p3, p4 Point, tol, minX, maxX, minY, maxY, minZ, maxZ float64) (bool, Point) {
+func doSegmentsIntersect(p1, p2, p3, p4 Point, tol, minX, maxX, minY, maxY, minZ, maxZ float64) (bool, Point) {
 	intersects := crossProduct(p1, p3, p4)*crossProduct(p2, p3, p4) <= tol &&
 		crossProduct(p3, p1, p2)*crossProduct(p4, p1, p2) <= tol
 
@@ -156,15 +166,33 @@ func doIntersectInRange(p1, p2, p3, p4 Point, tol, minX, maxX, minY, maxY, minZ,
 		px, py := (p1.x + t*(p2.x-p1.x)), (p1.y + t*(p2.y-p1.y))
 
 		if t >= 0 && t <= 1 && u >= 0 && u <= 1 {
-			// not sure if needed, only return true if in test area, should already
-			// be covered givin segment intersection logic above?
 			// if px >= minX && px <= maxX && py >= minY && py <= maxY {
-			return true, Point{x: px, y: py}
+				return true, Point{x: px, y: py}
 			// }
 		}
 	}
 
 	return false, Point{}
+}
+
+// this checks intersections based on line equation instead of segments, seems to be more accurate
+// i guess there is something off wiht how i set the "end" based on which direction i can
+// add the least amount of segments to until maxX/maxY/minY/minY are reached
+// Found issue -> when setting possible steps i was not respecting floating point values
+// https://en.wikipedia.org/wiki/Line%E2%80%93line_intersection#Given_two_line_equations
+func doEquationsIntersect(eq Eq, eq2 Eq, minX, maxX, minY, maxY float64) (bool, Point) {
+	if eq.a*eq2.b == eq.b*eq2.a {
+		return false, Point{0, 0, 0}
+	}
+
+	x := (eq.c*eq2.b - eq2.c*eq.b) / (eq.a*eq2.b - eq2.a*eq.b)
+	y := (eq2.c*eq.a - eq.c*eq2.a) / (eq.a*eq2.b - eq2.a*eq.b)
+
+	if x >= minX && x <= maxX && y >= minY && y <= maxY {
+		return true, Point{x, y, 0}
+	}
+
+	return false, Point{0, 0, 0}
 }
 
 func printMap(stones map[string]Stone, minX, maxX, minY, maxY, minZ, maxZ float64, view string, currentZ float64, collisionMap map[string]Point) {
@@ -190,7 +218,7 @@ func printMap(stones map[string]Stone, minX, maxX, minY, maxY, minZ, maxZ float6
 
 			for _, stone := range stones {
 
-				if ok, _ := doIntersectInRange(
+				if ok, _ := doSegmentsIntersect(
 					Point{float64(j * resolution), float64((i) * resolution), float64(0)},
 					Point{float64(j * resolution), float64((i) * resolution), float64(0)},
 					stone.start,
