@@ -11,7 +11,7 @@ import (
 
 var testInput = []string{
 	"19, 13, 30 @ -2,  1, -2", // 0
-	"18, 19, 22 @ -1, -1, -2", // 1
+	"18, 19, 30 @ -1, -1, -2", // 1
 	"20, 25, 34 @ -2, -2, -4", // 2
 	"12, 31, 28 @ -1, -2, -1", // 3
 	"20, 19, 15 @  1, -5, -3", // 4
@@ -41,5 +41,15 @@ func TestMainCollect(t *testing.T) {
 
 	if actual != expected {
 		t.Errorf("Expected other than %+v, got %+v", expected, actual)
+	}
+}
+
+
+func TestEzThrow(t *testing.T) {
+	expected := 47
+	actual := ReadInput(testInput, 7, 27)
+
+	if actual != expected {
+		t.Errorf("Expected %+v, got %+v", expected, actual)
 	}
 }

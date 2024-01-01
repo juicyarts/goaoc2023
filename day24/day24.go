@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/fatih/color"
+	"gonum.org/v1/gonum/mat"
 )
 
 type Point struct {
@@ -36,7 +37,7 @@ var emptySpace = color.New(color.Bold, color.FgBlack).SprintFunc()
 var axis = color.New(color.FgWhite).SprintFunc()
 
 func ReadInput(input []string, min float64, max float64) int {
-	initialStones := map[string]Stone{}
+	initialStones := []Stone{}
 	maxX, maxY, maxZ := max, max, max
 	minX, minY, minZ := min, min, min
 
@@ -56,30 +57,37 @@ func ReadInput(input []string, min float64, max float64) int {
 			velAsInt = append(velAsInt, float64(n))
 		}
 
+		// Fortunately we don't have any stones that stand still in one direction, otherwise this would not work
 		possibleSteps := float64(0)
 		tx, ty, tz := float64(0), float64(0), float64(0)
 
-		if velAsInt[0] > 0 {
-			tx = (maxX - posAsInt[0]) / velAsInt[0]
-		} else if velAsInt[0] < 0 {
-			tx = (minX - posAsInt[0]) / velAsInt[0]
+		if velAsInt[0] != 0 {
+			if velAsInt[0] > 0 {
+				tx = (maxX - posAsInt[0]) / velAsInt[0]
+			} else if velAsInt[0] < 0 {
+				tx = (minX - posAsInt[0]) / velAsInt[0]
+			}
 		}
 
-		if velAsInt[1] > 0 {
-			ty = (maxY - posAsInt[1]) / velAsInt[1]
-		} else if velAsInt[1] < 0 {
-			ty = (minY - posAsInt[1]) / velAsInt[1]
+		if velAsInt[1] != 0 {
+			if velAsInt[1] > 0 {
+				ty = (maxY - posAsInt[1]) / velAsInt[1]
+			} else if velAsInt[1] < 0 {
+				ty = (minY - posAsInt[1]) / velAsInt[1]
+			}
 		}
 
-		if velAsInt[2] > 0 {
-			tz = (maxZ - posAsInt[2]) / velAsInt[2]
-		} else if velAsInt[2] < 0 {
-			tz = (minZ - posAsInt[2]) / velAsInt[2]
+		if velAsInt[2] != 0 {
+			if velAsInt[2] > 0 {
+				tz = (maxZ - posAsInt[2]) / velAsInt[2]
+			} else if velAsInt[2] < 0 {
+				tz = (minZ - posAsInt[2]) / velAsInt[2]
+			}
 		}
 
 		possibleSteps = math.Min(tx, math.Min(ty, tz))
 
-		initialStones[fmt.Sprintf("%+v", rowIndex)] = Stone{
+		initialStones = append(initialStones, Stone{
 			name: rowIndex,
 			start: Point{
 				x: posAsInt[0],
@@ -101,28 +109,65 @@ func ReadInput(input []string, min float64, max float64) int {
 				b: -velAsInt[0],
 				c: velAsInt[1]*posAsInt[0] - velAsInt[0]*posAsInt[1],
 			},
-		}
+		})
 	}
 
-	collisions := 0
-	for _, stone := range initialStones {
+	intersections := 0
 
+	for _, stone := range initialStones {
 		for _, otherStone := range initialStones {
 			if otherStone.name == stone.name {
 				continue
 			}
 
-			eqCheck, point := doEquationsIntersect(stone.eq, otherStone.eq, minX, maxX, minY, maxY)
+			eqCheck, point := doIntersect(stone.eq, otherStone.eq, minX, maxX, minY, maxY, minZ, maxZ)
 			// ensure point is not smaller than the origin of a stone // exclude "past"
 			if eqCheck && ((point.x-stone.start.x)*stone.vel.x >= 0 && (point.y-stone.start.y)*stone.vel.y >= 0 &&
 				(point.x-otherStone.start.x)*otherStone.vel.x >= 0 && (point.y-otherStone.start.y)*otherStone.vel.y >= 0) {
 				fmt.Print("Line Equotation based check Check: ", eqCheck, point, "\n")
-				collisions++
+				intersections++
 			}
 		}
 	}
 
-	return collisions / 2 // dividie by two since every collision is recorded twice
+	// thanks: https://github.com/p88h/aoc2023/blob/main/day24.py
+	//
+	h0, h1, h2 := initialStones[0], initialStones[1], initialStones[2]
+
+	data := []float64{
+		h1.vel.y - h0.vel.y, h0.vel.x - h1.vel.x, 0, h0.start.y - h1.start.y, h1.start.x - h0.start.x, 0,
+		h2.vel.y - h0.vel.y, h0.vel.x - h2.vel.x, 0, h0.start.y - h2.start.y, h2.start.x - h0.start.x, 0,
+		h1.vel.z - h0.vel.z, 0, h0.vel.x - h1.vel.x, h0.start.z - h1.start.z, 0, h1.start.x - h0.start.x,
+		h2.vel.z - h0.vel.z, 0, h0.vel.x - h2.vel.x, h0.start.z - h2.start.z, 0, h2.start.x - h0.start.x,
+		0, h1.vel.z - h0.vel.z, h0.vel.y - h1.vel.y, 0, h0.start.z - h1.start.z, h1.start.y - h0.start.y,
+		0, h2.vel.z - h0.vel.z, h0.vel.y - h2.vel.y, 0, h0.start.z - h2.start.z, h2.start.y - h0.start.y,
+	}
+
+	a := mat.NewDense(6, 6, data)
+
+	vector := []float64{
+		(h0.start.y*h0.vel.x - h1.start.y*h1.vel.x) - (h0.start.x*h0.vel.y - h1.start.x*h1.vel.y),
+		(h0.start.y*h0.vel.x - h2.start.y*h2.vel.x) - (h0.start.x*h0.vel.y - h2.start.x*h2.vel.y),
+		(h0.start.z*h0.vel.x - h1.start.z*h1.vel.x) - (h0.start.x*h0.vel.z - h1.start.x*h1.vel.z),
+		(h0.start.z*h0.vel.x - h2.start.z*h2.vel.x) - (h0.start.x*h0.vel.z - h2.start.x*h2.vel.z),
+		(h0.start.z*h0.vel.y - h1.start.z*h1.vel.y) - (h0.start.y*h0.vel.z - h1.start.y*h1.vel.z),
+		(h0.start.z*h0.vel.y - h2.start.z*h2.vel.y) - (h0.start.y*h0.vel.z - h2.start.y*h2.vel.z),
+	}
+
+	b := mat.NewVecDense(6, vector)
+
+	var x mat.VecDense
+
+	if err := x.SolveVec(a, b); err != nil {
+		panic(err)
+	}
+
+	sum := x.AtVec(0) + x.AtVec(1) + x.AtVec(2)
+
+	// printMap(initialStones, minX, maxX, minY, maxY, minZ, maxZ, "z/x", 1)
+
+	fmt.Print("TEST ", x.AtVec(0), x.AtVec(1), x.AtVec(2), int(sum+0.5), "\n")
+	return intersections / 2 // dividie by two since every intersection is recorded twice
 }
 
 // this checks intersections based on line equation instead of segments, seems to be more accurate
@@ -130,7 +175,7 @@ func ReadInput(input []string, min float64, max float64) int {
 // add the least amount of segments to until maxX/maxY/minY/minY are reached
 // Found issue -> when setting possible steps i was not respecting floating point values
 // https://en.wikipedia.org/wiki/Line%E2%80%93line_intersection#Given_two_line_equations
-func doEquationsIntersect(eq Eq, eq2 Eq, minX, maxX, minY, maxY float64) (bool, Point) {
+func doIntersect(eq Eq, eq2 Eq, minX, maxX, minY, maxY, minZ, maxZ float64) (bool, Point) {
 	if eq.a*eq2.b == eq.b*eq2.a {
 		return false, Point{0, 0, 0}
 	}
@@ -177,7 +222,7 @@ func doSegmentsIntersect(p1, p2, p3, p4 Point, tol, minX, maxX, minY, maxY, minZ
 	return false, Point{}
 }
 
-func printMap(stones map[string]Stone, minX, maxX, minY, maxY, minZ, maxZ float64, view string, currentZ float64, collisionMap map[string]Point) {
+func printMap(stones []Stone, minX, maxX, minY, maxY, minZ, maxZ float64, view string, currentZ float64) {
 	fmt.Printf("--------------- \n")
 	fmt.Printf("Drawing Min|Max x:%+v|%+v,y:%+v|%+v,z:%+v|%+v,%+v at level: %+v \n", minX, maxX, minY, maxY, minZ, maxZ, view, currentZ)
 	fmt.Printf("--------------- \n")
@@ -186,15 +231,22 @@ func printMap(stones map[string]Stone, minX, maxX, minY, maxY, minZ, maxZ float6
 	padding := float64(25)
 	resolution := float64(1)
 
-	for i := (maxY + padding) / resolution; i >= (minY-padding)/resolution; i-- {
+	_, mainAxisMin, mainAxisMax := "y", minY, maxY
+	_, subAxisMin, subAxisMax := "x", minX, maxX
+	// depthAxis, depthAxisMin, depthAxisMax := "z", minZ, maxZ
+
+	if view == "x/y" {
+		mainAxisMin, mainAxisMax, subAxisMin, subAxisMax = minX, maxX, minY, maxY
+	}
+
+	for i := (mainAxisMax + padding) / resolution; i >= (mainAxisMin-padding)/resolution; i-- {
 		fmt.Print("\n")
-		for j := (minX - padding) / resolution; j <= (maxX+padding)/resolution; j++ {
+		for j := (subAxisMin - padding) / resolution; j <= (subAxisMax+padding)/resolution; j++ {
 			foundStones := []string{}
 			isStart := false
 			isEnd := false
-			foundCollision := false
 
-			if j == (minX-padding)/resolution {
+			if j == (subAxisMin-padding)/resolution {
 				fmt.Print(axis(fmt.Sprintf("%3v", i)))
 			}
 
@@ -222,23 +274,15 @@ func printMap(stones map[string]Stone, minX, maxX, minY, maxY, minZ, maxZ float6
 				}
 			}
 
-			for _, collision := range collisionMap {
-				if math.Ceil(collision.x) == float64(j*resolution) && math.Ceil(collision.y) == float64(i*resolution) {
-					foundCollision = true
-				}
-			}
-
 			if len(foundStones) <= 0 {
-				if j < minX || i < minY || j > maxX || i > maxY {
+				if j < minX || i < mainAxisMin || j > maxX || i > mainAxisMax {
 					fmt.Print(emptySpace(fmt.Sprintf("%4s", "*")))
 				} else {
 					fmt.Print(space(fmt.Sprintf("%4s", "*")))
 				}
 			} else {
 				if len(foundStones) > 1 {
-					if foundCollision {
-						fmt.Print(collisionColor(fmt.Sprintf("%4s", strings.Join(foundStones, ","))))
-					} else if isStart {
+					if isStart {
 						fmt.Print(startColor(fmt.Sprintf("%4s", strings.Join(foundStones, ","))))
 					} else if isEnd {
 						fmt.Print(endColor(fmt.Sprintf("%4s", strings.Join(foundStones, ","))))
@@ -246,9 +290,7 @@ func printMap(stones map[string]Stone, minX, maxX, minY, maxY, minZ, maxZ float6
 						fmt.Print(multiple(fmt.Sprintf("%4s", strings.Join(foundStones, ","))))
 					}
 				} else {
-					if foundCollision {
-						fmt.Print(collisionColor(fmt.Sprintf("%4s", strings.Join(foundStones, ","))))
-					} else if isStart {
+					if isStart {
 						fmt.Print(startColor(fmt.Sprintf("%4s", foundStones[0])))
 					} else if isEnd {
 						fmt.Print(endColor(fmt.Sprintf("%4s", foundStones[0])))
@@ -260,9 +302,10 @@ func printMap(stones map[string]Stone, minX, maxX, minY, maxY, minZ, maxZ float6
 		}
 	}
 
-	fmt.Print("\n\n   ")
-	for i := (minX - padding) / resolution; i <= (maxX+padding)/resolution; i++ {
+	fmt.Printf("\n\n%v", view)
+	for i := (subAxisMin - padding) / resolution; i <= (subAxisMax+padding)/resolution; i++ {
 		fmt.Print(axis(fmt.Sprintf("%4d", int(i))))
 	}
+	fmt.Print("\n")
 	fmt.Print("\n")
 }
