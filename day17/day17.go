@@ -11,33 +11,12 @@ import (
 var primary = color.New(color.FgHiBlue).SprintFunc()
 var tertiary = color.New(color.FgHiRed).SprintFunc()
 
-var directions = []int{
-	0, 1, 2, 3,
-}
-
-var directionOppositionMap = map[int]int{
-	0: 2,
-	1: 3,
-	3: 1,
-	2: 0,
-}
-
 type Node struct {
-	next          []int
-	localDistance int
-	distance      int
-	heat          int
-	path          [][]int
-}
-
-func pathContainsLocation(path [][]int, location []int) bool {
-	for i := 0; i < len(path); i++ {
-		if path[i][0] == location[0] && path[i][1] == location[1] {
-			return true
-		}
-	}
-
-	return false
+	pos   []int
+	dir   int
+	steps int
+	heat  int
+	path  [][]int
 }
 
 type PriorityQueue []*Node
@@ -61,20 +40,19 @@ func (pq *PriorityQueue) Pop() interface{} {
 	old := *pq
 	n := len(old)
 	item := old[n-1]
-	old[n-1] = nil // avoid memory leak
+	old[n-1] = nil
 	*pq = old[0 : n-1]
 	return item
 }
 
-func Travel(input []string, start []int, minDistance, maxDistance int) int {
+func Travel(m []string, start []int, minSteps, maxSteps, dir int) int {
 
 	var pq = PriorityQueue{
 		&Node{
-			next:          append(start, 1), // one for left to right
-			localDistance: 0,
-			distance:      0,
-			heat:          0,
-			path:          [][]int{},
+			pos:   start,
+			dir:   dir,
+			steps: 0,
+			heat:  0,
 		},
 	}
 
@@ -84,90 +62,60 @@ func Travel(input []string, start []int, minDistance, maxDistance int) int {
 
 	for pq.Len() > 0 {
 		node := heap.Pop(&pq).(*Node)
+		nodeKey := fmt.Sprintf("%v", node.pos)
 
-		var directionToNext = map[int][]int{
-			0: {node.next[0] - 1, node.next[1]},
-			1: {node.next[0], node.next[1] + 1},
-			2: {node.next[0] + 1, node.next[1]},
-			3: {node.next[0], node.next[1] - 1},
+		if _, ok := visited[nodeKey]; ok || node.pos[0] < 0 || node.pos[1] < 0 || node.pos[0] >= len(m) || node.pos[1] >= len(m[0]) {
+			continue
 		}
 
-		char := input[node.next[0]][node.next[1]]
+		if node.steps > maxSteps {
+			continue
+		}
+
+		char := m[node.pos[0]][node.pos[1]]
 		charAsInt, _ := strconv.Atoi(string(char))
 		heat := node.heat + charAsInt
-		node.path = append(node.path, append(node.next, []int{node.localDistance, heat}...))
+		visited[nodeKey] = heat
+		fmt.Print("TEST: ", heat, " ", charAsInt, " ", string(char), "\n")
 
-		if node.next[0] == len(input)-1 && node.next[1] == len(input[0])-1 {
+		if node.pos[0] == len(m)-1 && node.pos[1] == len(m[0])-1 {
 			fmt.Printf("-----------------------\n")
-			fmt.Printf("Found End at %+v, with heat %+v, travel distance: %+v \n", node.next, heat, node.distance)
-			fmt.Print(node.path)
-			drawTileMap(input, node.path)
+			fmt.Printf("Found End at %+v, with heat %+v, travel distance: %+v \n", node.pos, heat, node.steps)
+			drawTileMap(m, visited)
 			return heat
 		}
 
-		for dirIndex := 0; dirIndex < len(directions); dirIndex++ {
-			next := append(directionToNext[directions[dirIndex]], directions[dirIndex])
-			nodeKey := fmt.Sprintf("%v", next)
+		directions := [][]int{{-1, 0}, {1, 0}, {0, -1}, {0, 1}}
 
-			fmt.Print("KEY: ", nodeKey)
-
-			isOutOfBounds := next[0] < 0 || next[1] < 0 || next[0] > len(input)-1 || next[1] > len(input[0])-1
-			isInOppositeDirection := directions[dirIndex] == directionOppositionMap[node.next[2]]
-
-			if previousHeat, ok := visited[nodeKey]; ok {
-				if previousHeat <= heat {
-					continue
-				}
-			}
-
-			if isOutOfBounds || isInOppositeDirection {
-				continue
-			}
-
-			localDistance := node.localDistance
-
-			if !pathContainsLocation(node.path, next) {
-				node.distance += 1
-			}
-
-			if directions[dirIndex] != node.next[2] {
-				localDistance = 1
-			} else {
-				localDistance += 1
-			}
-
-			// If localDistance is less than minDistance or greater than maxDistance, skip this direction
-			if localDistance < minDistance || localDistance > maxDistance {
-				continue
-			}
-
-			visited[nodeKey] = heat
-
-			if localDistance > maxDistance && directions[dirIndex] != node.next[2] {
-				heap.Push(&pq, &Node{
-					next:          next, // change direction
-					localDistance: 1,    // reset localDistance
-					heat:          heat,
-					path:          node.path,
-					distance:      node.distance,
-				})
-			} else {
-				heap.Push(&pq, &Node{
-					next:          []int{next[0], next[1], node.next[2]}, // keep same direction
-					localDistance: localDistance,
-					heat:          heat,
-					path:          node.path,
-					distance:      node.distance,
-				})
-			}
+		// keep moving in same dir
+		if node.steps < minSteps {
+			next := []int{node.pos[0] + directions[node.dir][0], node.pos[1] + directions[node.dir][1]}
+			heap.Push(&pq, &Node{pos: next, heat: heat, steps: node.steps + 1, dir: node.dir})
+			continue
 		}
+
+		for dirIndex, dir := range directions {
+			next := []int{node.pos[0] + dir[0], node.pos[1] + dir[1]}
+			if node.dir == dirIndex && node.steps > maxSteps {
+				continue
+			}
+
+			if node.dir == dirIndex && node.steps < minSteps {
+				heap.Push(&pq, &Node{pos: next, heat: heat, steps: node.steps + 1, dir: dirIndex})
+				continue
+			}
+
+			heap.Push(&pq, &Node{pos: next, heat: heat, steps: 1, dir: dirIndex})
+
+		}
+
+		drawTileMap(m, visited)
 	}
 
 	panic("No path found")
 }
 
-// vis unreliable again, but fun :/
-func drawTileMap(input []string, visisted [][]int) {
+func drawTileMap(input []string, visited map[string]int) {
 
 	// fmt.Printf("-----------------------\n")
 	printString := "\n"
@@ -175,12 +123,12 @@ func drawTileMap(input []string, visisted [][]int) {
 
 	highlightCount := 0
 
-	for lineIndex := 0; lineIndex < len(input); lineIndex++ {
-		line := input[lineIndex]
+	for rI := 0; rI < len(input); rI++ {
+		line := input[rI]
 		printString += evenTab
-		for charIndex := 0; charIndex < len(line); charIndex++ {
-			char := line[charIndex]
-			if pathContainsLocation(visisted, []int{lineIndex, charIndex}) {
+		for cI := 0; cI < len(line); cI++ {
+			char := line[cI]
+			if _, ok := visited[fmt.Sprintf("%v", []int{rI, cI})]; ok {
 				printString += tertiary(string(char))
 				highlightCount += 1
 			} else {
@@ -191,7 +139,7 @@ func drawTileMap(input []string, visisted [][]int) {
 	}
 	fmt.Print(printString)
 	fmt.Print("\n")
-	// fmt.Print(visisted, "\n")
+	// fmt.Print(visited, "\n")
 	fmt.Printf("Highlight Counter (to show diff between viz and actual distance): %+v \n", highlightCount)
 	fmt.Printf("-----------------------\n")
 }

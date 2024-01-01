@@ -1,6 +1,8 @@
 package day17
 
-import "testing"
+import (
+	"testing"
+)
 
 var testInput = []string{
 	"2413432311323",
@@ -27,8 +29,11 @@ var testInput2 = []string{
 }
 
 func TestTravelBasic(t *testing.T) {
-	expected := 102 // remove the start point
-	heat := Travel(testInput, []int{0, 0}, 0, 2)
+	expected := 94
+	heat := Travel(testInput, []int{0, 0}, 4, 10, 3)
+	// heatB := Travel(testInput, []int{0, 0}, 4, 10, 2)
+	// fmt.Print("T", heatB)
+	// foo := Travel(testInput2, []int{0, 0}, 4, 10, 3)
 
 	if heat != expected {
 		t.Errorf("Expected %v, got %v", expected, heat)

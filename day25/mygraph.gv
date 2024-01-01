@@ -1,0 +1,166 @@
+strict graph {
+
+
+	"rzs" [  weight=0 ];
+
+	"rzs" -- "cmg" [  weight=1 ];
+
+	"rzs" -- "lsr" [  weight=1 ];
+
+	"rzs" -- "rsh" [  weight=1 ];
+
+	"rzs" -- "qnr" [  weight=1 ];
+
+	"lsr" [  weight=0 ];
+
+	"lsr" -- "pzl" [  weight=1 ];
+
+	"lsr" -- "lhk" [  weight=1 ];
+
+	"lsr" -- "rzs" [  weight=1 ];
+
+	"lsr" -- "frs" [  weight=1 ];
+
+	"lsr" -- "rsh" [  weight=1 ];
+
+	"xhk" [  weight=0 ];
+
+	"xhk" -- "ntq" [  weight=1 ];
+
+	"xhk" -- "jqt" [  weight=1 ];
+
+	"xhk" -- "hfx" [  weight=1 ];
+
+	"xhk" -- "rhn" [  weight=1 ];
+
+	"xhk" -- "bvb" [  weight=1 ];
+
+	"cmg" [  weight=0 ];
+
+	"cmg" -- "lhk" [  weight=1 ];
+
+	"cmg" -- "bvb" [  weight=1 ];
+
+	"cmg" -- "rzs" [  weight=1 ];
+
+	"cmg" -- "qnr" [  weight=1 ];
+
+	"cmg" -- "nvd" [  weight=1 ];
+
+	"jqt" [  weight=0 ];
+
+	"jqt" -- "ntq" [  weight=1 ];
+
+	"jqt" -- "rhn" [  weight=1 ];
+
+	"jqt" -- "xhk" [  weight=1 ];
+
+	"jqt" -- "nvd" [  weight=1 ];
+
+	"hfx" [  weight=0 ];
+
+	"hfx" -- "xhk" [  weight=1 ];
+
+	"hfx" -- "rhn" [  weight=1 ];
+
+	"hfx" -- "bvb" [  weight=1 ];
+
+	"hfx" -- "pzl" [  weight=1 ];
+
+	"hfx" -- "ntq" [  weight=1 ];
+
+	"pzl" [  weight=0 ];
+
+	"pzl" -- "nvd" [  weight=1 ];
+
+	"pzl" -- "rsh" [  weight=1 ];
+
+	"pzl" -- "lsr" [  weight=1 ];
+
+	"pzl" -- "hfx" [  weight=1 ];
+
+	"rhn" [  weight=0 ];
+
+	"rhn" -- "xhk" [  weight=1 ];
+
+	"rhn" -- "bvb" [  weight=1 ];
+
+	"rhn" -- "hfx" [  weight=1 ];
+
+	"rhn" -- "jqt" [  weight=1 ];
+
+	"lhk" [  weight=0 ];
+
+	"lhk" -- "lsr" [  weight=1 ];
+
+	"lhk" -- "frs" [  weight=1 ];
+
+	"lhk" -- "cmg" [  weight=1 ];
+
+	"lhk" -- "nvd" [  weight=1 ];
+
+	"nvd" [  weight=0 ];
+
+	"nvd" -- "lhk" [  weight=1 ];
+
+	"nvd" -- "jqt" [  weight=1 ];
+
+	"nvd" -- "cmg" [  weight=1 ];
+
+	"nvd" -- "pzl" [  weight=1 ];
+
+	"nvd" -- "qnr" [  weight=1 ];
+
+	"ntq" [  weight=0 ];
+
+	"ntq" -- "jqt" [  weight=1 ];
+
+	"ntq" -- "hfx" [  weight=1 ];
+
+	"ntq" -- "bvb" [  weight=1 ];
+
+	"ntq" -- "xhk" [  weight=1 ];
+
+	"bvb" [  weight=0 ];
+
+	"bvb" -- "cmg" [  weight=1 ];
+
+	"bvb" -- "rhn" [  weight=1 ];
+
+	"bvb" -- "xhk" [  weight=1 ];
+
+	"bvb" -- "hfx" [  weight=1 ];
+
+	"bvb" -- "ntq" [  weight=1 ];
+
+	"rsh" [  weight=0 ];
+
+	"rsh" -- "pzl" [  weight=1 ];
+
+	"rsh" -- "lsr" [  weight=1 ];
+
+	"rsh" -- "rzs" [  weight=1 ];
+
+	"rsh" -- "frs" [  weight=1 ];
+
+	"qnr" [  weight=0 ];
+
+	"qnr" -- "cmg" [  weight=1 ];
+
+	"qnr" -- "nvd" [  weight=1 ];
+
+	"qnr" -- "rzs" [  weight=1 ];
+
+	"qnr" -- "frs" [  weight=1 ];
+
+	"frs" [  weight=0 ];
+
+	"frs" -- "rsh" [  weight=1 ];
+
+	"frs" -- "qnr" [  weight=1 ];
+
+	"frs" -- "lhk" [  weight=1 ];
+
+	"frs" -- "lsr" [  weight=1 ];
+
+}
